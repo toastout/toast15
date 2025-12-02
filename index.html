@@ -1335,13 +1335,13 @@
         // 아이콘 결정 로직
         if (keyLower.includes('time') || keyLower.match(/^\d{4}/)) {
           icon = icons.time;
-        } else if (keyLower.includes('location') {
+        } else if (keyLower.includes('location')) {
           icon = icons.location;
         } else if (keyLower.includes('belonging') || keyOriginal.startsWith('(')) {
           icon = icons.belongings;
         } else if (keyOriginal.includes('{{char}}') || keyOriginal.includes("'s outfit")) {
           icon = icons.char;
-        } else if (keyOriginal.includes('{{user}}') || keyLower.includes('user') {
+        } else if (keyOriginal.includes('{{user}}') || keyLower.includes('user')) {
           icon = icons.user;
         }
         
