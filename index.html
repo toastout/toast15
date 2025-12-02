@@ -1,0 +1,2084 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <!-- v4.8 배우 대기실 - user 아이콘 버그 수정, default 제거 -->
+  <title>📜 배우 대기실</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  
+  <!-- 폰트: 리디바탕 (본문), IBM Plex Sans KR (UI) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* v4.6 리디바탕 웹폰트 */
+    @font-face {
+      font-family: 'Ridibatang';
+      src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_twelve@1.0/RIDIBatang.woff') format('woff');
+      font-weight: normal;
+      font-display: swap;
+    }
+
+    /* 테마 컬러 */
+    :root {
+      --bg-base: #f8f6f1;
+      --bg-panel: #ffffff;
+      --bg-input: #f5f3ee;
+      --text-primary: #2c2c2c;
+      --text-secondary: #666;
+      --text-muted: #999;
+      --border: #e5e2db;
+      --border-light: #eeeae3;
+      --accent-a: #4a7c59;
+      --accent-a-bg: #e8f0ea;
+      --accent-b: #7c5a4a;
+      --accent-b-bg: #f0ebe8;
+      --accent-ui: #5c6bc0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'IBM Plex Sans KR', 'Noto Sans KR', sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-home {
+      width: 34px;
+      height: 34px;
+      border: none;
+      background: var(--bg-input);
+      border-radius: 8px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .btn-home:hover { background: var(--border); }
+
+    .title {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .header-right {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 7px 12px;
+      border: 1px solid var(--border);
+      background: var(--bg-panel);
+      color: var(--text-primary);
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s;
+      font-family: inherit;
+    }
+
+    .btn:hover { background: var(--bg-input); }
+    .btn:active { transform: scale(0.97); }
+    .btn.active { background: var(--accent-ui); color: white; border-color: var(--accent-ui); }
+
+    .btn-primary {
+      background: var(--accent-ui);
+      color: white;
+      border-color: var(--accent-ui);
+    }
+
+    .btn-primary:hover { background: #4a5ab0; }
+
+    .btn-sm { padding: 5px 10px; font-size: 0.75rem; }
+
+    /* Page control */
+    .page-control {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-right: 8px;
+      padding-right: 8px;
+      border-right: 1px solid var(--border);
+    }
+
+    .page-btn {
+      width: 28px;
+      height: 28px;
+      border: 1px solid var(--border);
+      background: var(--bg-panel);
+      border-radius: 4px;
+      font-size: 0.7rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-secondary);
+    }
+
+    .page-btn:hover { background: var(--bg-input); }
+    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .page-select {
+      padding: 4px 6px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 0.73rem;
+      background: var(--bg-panel);
+      font-family: inherit;
+      color: var(--text-primary);
+    }
+
+    .page-info {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      min-width: 50px;
+      text-align: center;
+    }
+
+    .page-custom-input {
+      width: 45px;
+      padding: 4px 6px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 0.73rem;
+      text-align: center;
+      font-family: inherit;
+    }
+
+    .page-custom-input:focus {
+      outline: none;
+      border-color: var(--accent-ui);
+    }
+
+    /* Font size control */
+    .font-size-control {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--bg-input);
+      padding: 2px 4px;
+      border-radius: 6px;
+    }
+
+    .font-size-control .btn {
+      padding: 4px 8px;
+      font-size: 0.7rem;
+      min-width: auto;
+    }
+
+    .font-size-label {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+      min-width: 20px;
+      text-align: center;
+    }
+
+    /* View mode toggle */
+    .view-toggle {
+      display: flex;
+      background: var(--bg-input);
+      border-radius: 6px;
+      padding: 2px;
+    }
+
+    .view-toggle-btn {
+      padding: 5px 10px;
+      border: none;
+      background: transparent;
+      font-size: 0.75rem;
+      cursor: pointer;
+      border-radius: 4px;
+      font-family: inherit;
+      color: var(--text-secondary);
+      transition: all 0.15s;
+    }
+
+    .view-toggle-btn.active {
+      background: white;
+      color: var(--text-primary);
+      font-weight: 500;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* Rules Panel */
+    .rules-panel {
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: none;
+    }
+
+    .rules-panel.open { display: block; }
+
+    .rules-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .rules-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .rules-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+
+    .rules-column {
+      background: var(--bg-input);
+      padding: 12px;
+      border-radius: 8px;
+    }
+
+    .rules-column-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .rule-pair {
+      margin-bottom: 6px;
+    }
+
+    .rule-pair:last-child { margin-bottom: 0; }
+
+    .rule-input {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.8rem;
+      background: var(--bg-panel);
+      font-family: inherit;
+    }
+
+    .rule-input:focus {
+      outline: none;
+      border-color: var(--accent-ui);
+    }
+
+    .btn-swap {
+      background: var(--accent-a-bg);
+      border-color: var(--accent-a);
+      color: var(--accent-a);
+    }
+
+    .btn-swap:hover {
+      background: var(--accent-a);
+      color: white;
+    }
+
+    .extra-rules {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--border);
+    }
+
+    .extra-rules-title {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .extra-rule-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .extra-rule-row .rule-input { flex: 1; }
+
+    .rule-arrow {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    .btn-remove {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      font-size: 0.9rem;
+    }
+
+    .btn-remove:hover { color: #e74c3c; }
+
+    .rules-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: space-between;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Meta Options */
+    .meta-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .meta-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      background: var(--bg-input);
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .meta-option input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent-ui);
+    }
+
+    .meta-label {
+      flex: 1;
+      font-size: 0.8rem;
+    }
+
+    .meta-hint {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    .meta-select {
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--bg-panel);
+      font-family: inherit;
+    }
+
+    /* TimeInfo pretty style - 기존 테마와 조화 */
+    .timeinfo-box {
+      margin: 14px 0;
+      padding: 12px 14px;
+      background: var(--bg-input);
+      border-left: 2px solid var(--border);
+      border-radius: 0 6px 6px 0;
+      font-family: 'IBM Plex Sans KR', sans-serif;
+      font-size: 0.73rem;
+      line-height: 1.5;
+      color: var(--text-secondary);
+    }
+
+    .timeinfo-box .ti-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .timeinfo-box .ti-row:last-child { margin-bottom: 0; }
+
+    .timeinfo-box .ti-icon {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+      margin-top: 2px;
+      opacity: 0.6;
+    }
+
+    .timeinfo-box .ti-icon svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .timeinfo-box .ti-value {
+      color: var(--text-secondary);
+    }
+
+    /* Edit mode */
+    .edit-toolbar {
+      display: none;
+      padding: 10px 20px;
+      background: var(--accent-ui);
+      color: white;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .edit-toolbar.show { display: flex; }
+
+    .edit-toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+    }
+
+    .edit-toolbar-right {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-edit-action {
+      padding: 6px 12px;
+      border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.1);
+      color: white;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn-edit-action:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .btn-edit-action.primary {
+      background: white;
+      color: var(--accent-ui);
+      border-color: white;
+    }
+
+    .text-view.editable {
+      background: #fffef5;
+      cursor: text;
+    }
+
+    .text-view.editable:focus {
+      outline: 2px solid var(--accent-ui);
+      outline-offset: -2px;
+    }
+
+    /* Main */
+    main {
+      flex: 1;
+      display: flex;
+      gap: 1px;
+      background: var(--border);
+      overflow: hidden;
+    }
+
+    main.single-view {
+      gap: 0;
+    }
+
+    main.single-view .panel { display: none; }
+    main.single-view .panel.active { display: flex; }
+
+    .panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-panel);
+      min-width: 0;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border-light);
+      background: linear-gradient(to bottom, var(--bg-panel), var(--bg-input));
+    }
+
+    .panel-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-badge {
+      padding: 3px 8px;
+      border-radius: 10px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+
+    .panel-a .panel-badge { background: var(--accent-a-bg); color: var(--accent-a); }
+    .panel-b .panel-badge { background: var(--accent-b-bg); color: var(--accent-b); }
+
+    .panel-filename {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .panel-actions { display: flex; gap: 5px; }
+
+    .panel-content {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .upload-zone {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      background: var(--bg-input);
+      transition: all 0.2s;
+    }
+
+    .upload-zone:hover { background: var(--border-light); }
+    .upload-zone.dragover { background: var(--accent-a-bg); }
+    .panel-b .upload-zone.dragover { background: var(--accent-b-bg); }
+    .upload-zone.hidden { display: none; }
+
+    .upload-icon { font-size: 2.2rem; margin-bottom: 8px; opacity: 0.5; }
+    .upload-text { font-size: 0.85rem; color: var(--text-secondary); }
+    .upload-hint { font-size: 0.7rem; color: var(--text-muted); margin-top: 4px; }
+
+    .text-view {
+      position: absolute;
+      inset: 0;
+      overflow-y: auto;
+      padding: 20px;
+      font-family: 'Ridibatang', 'Noto Serif KR', serif;  /* 리디바탕 적용 */
+      font-size: 0.9rem;
+      line-height: 1.95;
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: var(--bg-panel);
+    }
+
+    .text-view.hidden { display: none; }
+
+    .text-view::-webkit-scrollbar { width: 6px; }
+    .text-view::-webkit-scrollbar-track { background: transparent; }
+    .text-view::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* Speaker/Index styling */
+    .speaker-line {
+      display: block;
+      font-family: 'IBM Plex Sans KR', sans-serif;
+      font-weight: 600;
+      font-size: 0.8rem;
+      margin-top: 1.6em;
+      margin-bottom: 0.3em;
+      padding: 5px 10px;
+      border-radius: 6px;
+      width: fit-content;
+    }
+
+    .panel-a .speaker-line { background: var(--accent-a-bg); color: var(--accent-a); }
+    .panel-b .speaker-line { background: var(--accent-b-bg); color: var(--accent-b); }
+    .speaker-line:first-child { margin-top: 0; }
+
+    .index-num {
+      font-weight: 700;
+      margin-right: 6px;
+      opacity: 0.7;
+    }
+
+    /* Highlight */
+    .text-view mark, .capture-text mark {
+      padding: 1px 2px;
+      border-radius: 2px;
+    }
+
+    mark.yellow { background: #fef08a; }
+    mark.green { background: #bbf7d0; }
+    mark.blue { background: #bfdbfe; }
+    mark.pink { background: #fbcfe8; }
+    mark.orange { background: #fed7aa; }
+
+    .highlight-toolbar {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 6px 10px;
+      display: none;
+      gap: 6px;
+      align-items: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+      z-index: 150;
+    }
+
+    .highlight-toolbar.show { display: flex; }
+
+    .highlight-color {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .highlight-color:hover { transform: scale(1.15); }
+    .highlight-color.yellow { background: #fef08a; }
+    .highlight-color.green { background: #bbf7d0; }
+    .highlight-color.blue { background: #bfdbfe; }
+    .highlight-color.pink { background: #fbcfe8; }
+    .highlight-color.orange { background: #fed7aa; }
+
+    .btn-clear-hl {
+      margin-left: 6px;
+      padding: 3px 6px;
+      font-size: 0.7rem;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+
+    .btn-clear-hl:hover { border-color: #e74c3c; color: #e74c3c; }
+
+    /* Toast & Sync */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--text-primary);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 300;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    .sync-indicator {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--text-primary);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 200;
+    }
+
+    .sync-indicator.show { opacity: 0.9; }
+
+    /* Capture Modal */
+    .capture-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 16px;
+    }
+
+    .capture-modal.open { display: flex; }
+
+    .capture-box {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      max-width: 95vw;
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.3);
+    }
+
+    .capture-header {
+      padding: 12px 16px;
+      background: var(--bg-input);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .capture-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .capture-title {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .capture-mode-toggle {
+      display: flex;
+      background: var(--border);
+      border-radius: 6px;
+      padding: 2px;
+    }
+
+    .capture-mode-btn {
+      padding: 5px 10px;
+      border: none;
+      background: transparent;
+      font-size: 0.75rem;
+      cursor: pointer;
+      border-radius: 4px;
+      font-family: inherit;
+      color: var(--text-secondary);
+    }
+
+    .capture-mode-btn.active {
+      background: white;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    /* Range selector */
+    .range-selector {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .range-input {
+      width: 50px;
+      padding: 4px 6px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 0.75rem;
+      text-align: center;
+      font-family: inherit;
+    }
+
+    .range-input:focus {
+      outline: none;
+      border-color: var(--accent-ui);
+    }
+
+    .capture-body {
+      overflow: auto;
+      padding: 16px;
+      background: #e0e0e0;
+    }
+
+    #capture-target {
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .capture-grid {
+      display: grid;
+    }
+
+    .capture-grid.horizontal {
+      grid-template-columns: 1fr 1fr;
+      min-width: 700px;
+    }
+
+    .capture-grid.vertical {
+      grid-template-columns: 1fr;
+      min-width: 360px;
+      max-width: 480px;
+    }
+
+    .capture-grid.single-a,
+    .capture-grid.single-b {
+      grid-template-columns: 1fr;
+      min-width: 360px;
+      max-width: 500px;
+    }
+
+    .capture-grid.single-a .capture-panel-b,
+    .capture-grid.single-b .capture-panel-a {
+      display: none;
+    }
+
+    .capture-panel {
+      padding: 18px;
+    }
+
+    .capture-grid.horizontal .capture-panel-a { border-right: 1px solid var(--border); }
+    .capture-grid.vertical .capture-panel-a { border-bottom: 1px solid var(--border); }
+
+    .capture-panel-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--border-light);
+    }
+
+    .capture-badge {
+      padding: 3px 10px;
+      border-radius: 10px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+
+    .capture-badge-a { background: var(--accent-a-bg); color: var(--accent-a); }
+    .capture-badge-b { background: var(--accent-b-bg); color: var(--accent-b); }
+
+    .capture-text {
+      font-family: 'Ridibatang', 'Noto Serif KR', serif;  /* 리디바탕 적용 */
+      font-size: 0.85rem;
+      line-height: 1.85;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .capture-text .speaker-line {
+      font-family: 'IBM Plex Sans KR', sans-serif;
+      font-weight: 600;
+      font-size: 0.75rem;
+      margin-top: 1.4em;
+      margin-bottom: 0.2em;
+      padding: 4px 8px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .capture-panel-a .speaker-line { background: var(--accent-a-bg); color: var(--accent-a); }
+    .capture-panel-b .speaker-line { background: var(--accent-b-bg); color: var(--accent-b); }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+      header { padding: 10px 12px; }
+      .title { font-size: 0.9rem; }
+      .btn { padding: 6px 10px; font-size: 0.75rem; }
+      main { flex-direction: column; }
+      .panel { height: 46vh; }
+      main.single-view .panel.active { height: auto; flex: 1; }
+      .rules-grid { grid-template-columns: 1fr; }
+      .text-view { padding: 14px; font-size: 0.85rem; }
+      .capture-grid.horizontal { grid-template-columns: 1fr; min-width: auto; }
+      .capture-grid.horizontal .capture-panel-a { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+
+    input[type="file"] { display: none; }
+  </style>
+  
+  <!-- 캡처용 라이브러리 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+  <header>
+    <div class="header-left">
+      <button class="btn-home" id="btn-home" title="홈으로">🍞</button>
+      <span class="title" title="텍스트 비교 뷰어">📜 배우 대기실</span>
+      <div class="view-toggle">
+        <button class="view-toggle-btn active" data-view="dual">비교</button>
+        <button class="view-toggle-btn" data-view="single-a">A만</button>
+        <button class="view-toggle-btn" data-view="single-b">B만</button>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="page-control">
+        <button class="page-btn" id="page-prev">◀</button>
+        <select class="page-select" id="page-size">
+          <option value="0">전체</option>
+          <option value="5">5개씩</option>
+          <option value="10">10개씩</option>
+          <option value="custom">직접 입력</option>
+        </select>
+        <input type="number" class="page-custom-input" id="page-custom" min="1" placeholder="n" style="display:none;">
+        <button class="page-btn" id="page-next">▶</button>
+        <span class="page-info" id="page-info"></span>
+      </div>
+      <div class="font-size-control">
+        <button class="btn btn-sm" id="font-decrease" title="글씨 작게">A-</button>
+        <span class="font-size-label" id="font-size-label">중</span>
+        <button class="btn btn-sm" id="font-increase" title="글씨 크게">A+</button>
+      </div>
+      <button class="btn" id="btn-meta">🏷️ 메타</button>
+      <button class="btn" id="btn-rules">🔄 치환</button>
+      <button class="btn" id="btn-copy">📋 복사</button>
+      <button class="btn" id="btn-edit">✏️ 편집</button>
+      <button class="btn" id="btn-sync">🔗 동기화</button>
+      <button class="btn btn-primary" id="btn-capture">📸 캡처</button>
+    </div>
+  </header>
+
+  <!-- Edit Toolbar -->
+  <div class="edit-toolbar" id="edit-toolbar">
+    <div class="edit-toolbar-left">
+      <span>✏️ 편집 모드</span>
+      <span style="opacity:0.7;font-size:0.75rem;">— 텍스트를 직접 수정할 수 있어요</span>
+    </div>
+    <div class="edit-toolbar-right">
+      <button class="btn-edit-action" id="btn-edit-cancel">취소</button>
+      <button class="btn-edit-action primary" id="btn-export">💾 내보내기 (.txt)</button>
+    </div>
+  </div>
+
+  <div class="rules-panel" id="rules-panel">
+    <div class="rules-header">
+      <span class="rules-title">🔄 텍스트 치환</span>
+      <button class="btn btn-sm btn-swap" id="btn-swap">↔️ user/char 스왑</button>
+    </div>
+    
+    <!-- 추가 치환 (위로 이동) -->
+    <div class="extra-rules">
+      <div class="extra-rules-title">📝 추가 치환 (먼저 적용됨)</div>
+      <div id="extra-rules-list"></div>
+      <button class="btn btn-sm" id="btn-add-rule">+ 추가</button>
+    </div>
+    
+    <!-- 화자 치환 (아래로) -->
+    <div class="speaker-rules">
+      <div class="extra-rules-title" style="margin-top:12px;">👤 화자 치환</div>
+      <div class="rules-grid">
+        <div class="rules-column">
+          <div class="rules-column-title">원본</div>
+          <div class="rule-pair"><input type="text" class="rule-input" id="name1" placeholder="화자명 1"></div>
+          <div class="rule-pair"><input type="text" class="rule-input" id="name2" placeholder="화자명 2"></div>
+        </div>
+        <div class="rules-column">
+          <div class="rules-column-title">치환</div>
+          <div class="rule-pair"><input type="text" class="rule-input" id="replace1" value="{{char}}"></div>
+          <div class="rule-pair"><input type="text" class="rule-input" id="replace2" value="{{user}}"></div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="rules-actions">
+      <button class="btn btn-sm" id="btn-reset-text">↩️ 원본 복원</button>
+      <button class="btn btn-sm btn-primary" id="btn-apply-rules">✅ 적용</button>
+    </div>
+  </div>
+
+  <!-- Meta Options Panel -->
+  <div class="rules-panel" id="meta-panel">
+    <div class="rules-header">
+      <span class="rules-title">🏷️ 메타데이터 표시 옵션</span>
+    </div>
+    <div class="meta-options">
+      <label class="meta-option">
+        <input type="checkbox" id="opt-timeinfo" checked>
+        <span class="meta-label">📍 TimeInfo 상태창</span>
+        <select class="meta-select" id="opt-timeinfo-style">
+          <option value="pretty">예쁘게 꾸미기</option>
+          <option value="hide">숨기기</option>
+          <option value="raw">원본 그대로</option>
+        </select>
+      </label>
+      <label class="meta-option">
+        <input type="checkbox" id="opt-approved">
+        <span class="meta-label">✅ ## Approved / ## Response</span>
+        <span class="meta-hint">숨기기</span>
+      </label>
+      <label class="meta-option">
+        <input type="checkbox" id="opt-checkmarks">
+        <span class="meta-label">✔✔ 체크마크</span>
+        <span class="meta-hint">숨기기</span>
+      </label>
+      <label class="meta-option">
+        <input type="checkbox" id="opt-moai">
+        <span class="meta-label">🗿 구분선 (이모지)</span>
+        <span class="meta-hint">숨기기</span>
+      </label>
+      <label class="meta-option">
+        <input type="checkbox" id="opt-tags">
+        <span class="meta-label">&lt;태그&gt; HTML 태그</span>
+        <span class="meta-hint">숨기기</span>
+      </label>
+    </div>
+    <div class="rules-actions">
+      <button class="btn btn-sm" id="btn-meta-reset">↩️ 기본값</button>
+      <button class="btn btn-sm btn-primary" id="btn-meta-apply">✅ 적용</button>
+    </div>
+  </div>
+
+  <main id="main-container">
+    <div class="panel panel-a active">
+      <div class="panel-header">
+        <div class="panel-label">
+          <span class="panel-badge">A</span>
+          <span class="panel-filename" id="filename-a"></span>
+        </div>
+        <div class="panel-actions">
+          <button class="btn btn-sm" id="load-a">📂</button>
+          <button class="btn btn-sm" id="clear-a" style="display:none;">✕</button>
+        </div>
+      </div>
+      <div class="panel-content">
+        <div class="upload-zone" id="zone-a">
+          <div class="upload-icon">📄</div>
+          <div class="upload-text">파일 드래그 또는 클릭</div>
+          <div class="upload-hint">.txt</div>
+        </div>
+        <div class="text-view hidden" id="view-a"></div>
+      </div>
+      <input type="file" id="input-a" accept=".txt">
+    </div>
+
+    <div class="panel panel-b active">
+      <div class="panel-header">
+        <div class="panel-label">
+          <span class="panel-badge">B</span>
+          <span class="panel-filename" id="filename-b"></span>
+        </div>
+        <div class="panel-actions">
+          <button class="btn btn-sm" id="load-b">📂</button>
+          <button class="btn btn-sm" id="clear-b" style="display:none;">✕</button>
+        </div>
+      </div>
+      <div class="panel-content">
+        <div class="upload-zone" id="zone-b">
+          <div class="upload-icon">📄</div>
+          <div class="upload-text">파일 드래그 또는 클릭</div>
+          <div class="upload-hint">.txt</div>
+        </div>
+        <div class="text-view hidden" id="view-b"></div>
+      </div>
+      <input type="file" id="input-b" accept=".txt">
+    </div>
+  </main>
+
+  <div class="highlight-toolbar" id="highlight-toolbar">
+    <button class="highlight-color yellow" data-color="yellow"></button>
+    <button class="highlight-color green" data-color="green"></button>
+    <button class="highlight-color blue" data-color="blue"></button>
+    <button class="highlight-color pink" data-color="pink"></button>
+    <button class="highlight-color orange" data-color="orange"></button>
+    <button class="btn-clear-hl" id="btn-clear-hl">✕</button>
+  </div>
+
+  <div class="sync-indicator" id="sync-indicator">🔗 동기화</div>
+  <div class="toast" id="toast"></div>
+
+  <div class="capture-modal" id="capture-modal">
+    <div class="capture-box">
+      <div class="capture-header">
+        <div class="capture-header-left">
+          <span class="capture-title">📸 캡처</span>
+          <div class="capture-mode-toggle">
+            <button class="capture-mode-btn active" data-mode="horizontal">가로</button>
+            <button class="capture-mode-btn" data-mode="vertical">세로</button>
+            <button class="capture-mode-btn" data-mode="single-a">A만</button>
+            <button class="capture-mode-btn" data-mode="single-b">B만</button>
+          </div>
+          <div class="range-selector">
+            <span>구간:</span>
+            <input type="number" class="range-input" id="range-start" min="1" value="1" placeholder="시작">
+            <span>~</span>
+            <input type="number" class="range-input" id="range-end" placeholder="끝">
+            <button class="btn btn-sm" id="btn-apply-range">적용</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-sm btn-primary" id="btn-download">💾 저장</button>
+          <button class="btn btn-sm" id="btn-close-capture">✕</button>
+        </div>
+      </div>
+      <div class="capture-body">
+        <div id="capture-target">
+          <div class="capture-grid horizontal" id="capture-grid">
+            <div class="capture-panel capture-panel-a">
+              <div class="capture-panel-header">
+                <span class="capture-badge capture-badge-a">A</span>
+              </div>
+              <div class="capture-text" id="capture-text-a"></div>
+            </div>
+            <div class="capture-panel capture-panel-b">
+              <div class="capture-panel-header">
+                <span class="capture-badge capture-badge-b">B</span>
+              </div>
+              <div class="capture-text" id="capture-text-b"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      viewMode: 'dual',
+      syncEnabled: true,
+      isScrolling: false,
+      originalTextA: '',
+      originalTextB: '',
+      formattedHtmlA: '',
+      formattedHtmlB: '',
+      filenameA: '',
+      filenameB: '',
+      extraRules: [],
+      captureMode: 'horizontal',
+      speakerCountA: 0,
+      speakerCountB: 0,
+      metaOptions: {
+        timeinfo: 'pretty',
+        hideApproved: true,
+        hideCheckmarks: true,
+        hideMoai: true,
+        hideTags: true
+      },
+      pagination: {
+        pageSize: 0,
+        currentPage: 1,
+        totalPages: 1
+      },
+      editMode: false,
+      fontSize: 2  // 0:작게, 1:조금작게, 2:중, 3:조금크게, 4:크게
+    };
+
+    // SVG 아이콘 정의
+    /* v4.8 SVG 아이콘 - 하트(char)/별(user), default 제거 */
+    const icons = {
+      time: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>`,
+      location: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`,
+      char: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`,
+      user: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+      belongings: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`
+    };
+
+    const el = {
+      mainContainer: document.getElementById('main-container'),
+      zoneA: document.getElementById('zone-a'),
+      zoneB: document.getElementById('zone-b'),
+      viewA: document.getElementById('view-a'),
+      viewB: document.getElementById('view-b'),
+      inputA: document.getElementById('input-a'),
+      inputB: document.getElementById('input-b'),
+      filenameA: document.getElementById('filename-a'),
+      filenameB: document.getElementById('filename-b'),
+      loadA: document.getElementById('load-a'),
+      loadB: document.getElementById('load-b'),
+      clearA: document.getElementById('clear-a'),
+      clearB: document.getElementById('clear-b'),
+      btnSync: document.getElementById('btn-sync'),
+      syncIndicator: document.getElementById('sync-indicator'),
+      btnRules: document.getElementById('btn-rules'),
+      rulesPanel: document.getElementById('rules-panel'),
+      name1: document.getElementById('name1'),
+      name2: document.getElementById('name2'),
+      replace1: document.getElementById('replace1'),
+      replace2: document.getElementById('replace2'),
+      btnSwap: document.getElementById('btn-swap'),
+      btnAddRule: document.getElementById('btn-add-rule'),
+      extraRulesList: document.getElementById('extra-rules-list'),
+      btnApplyRules: document.getElementById('btn-apply-rules'),
+      btnResetText: document.getElementById('btn-reset-text'),
+      btnCapture: document.getElementById('btn-capture'),
+      captureModal: document.getElementById('capture-modal'),
+      captureGrid: document.getElementById('capture-grid'),
+      captureTextA: document.getElementById('capture-text-a'),
+      captureTextB: document.getElementById('capture-text-b'),
+      btnCloseCapture: document.getElementById('btn-close-capture'),
+      btnDownload: document.getElementById('btn-download'),
+      rangeStart: document.getElementById('range-start'),
+      rangeEnd: document.getElementById('range-end'),
+      btnApplyRange: document.getElementById('btn-apply-range'),
+      highlightToolbar: document.getElementById('highlight-toolbar'),
+      btnClearHl: document.getElementById('btn-clear-hl'),
+      btnHome: document.getElementById('btn-home'),
+      toast: document.getElementById('toast'),
+      btnMeta: document.getElementById('btn-meta'),
+      metaPanel: document.getElementById('meta-panel'),
+      optTimeinfo: document.getElementById('opt-timeinfo'),
+      optTimeinfoStyle: document.getElementById('opt-timeinfo-style'),
+      optApproved: document.getElementById('opt-approved'),
+      optCheckmarks: document.getElementById('opt-checkmarks'),
+      optMoai: document.getElementById('opt-moai'),
+      optTags: document.getElementById('opt-tags'),
+      btnMetaApply: document.getElementById('btn-meta-apply'),
+      btnMetaReset: document.getElementById('btn-meta-reset'),
+      pageSize: document.getElementById('page-size'),
+      pageCustom: document.getElementById('page-custom'),
+      pagePrev: document.getElementById('page-prev'),
+      pageNext: document.getElementById('page-next'),
+      pageInfo: document.getElementById('page-info'),
+      btnEdit: document.getElementById('btn-edit'),
+      btnCopy: document.getElementById('btn-copy'),
+      editToolbar: document.getElementById('edit-toolbar'),
+      btnEditCancel: document.getElementById('btn-edit-cancel'),
+      btnExport: document.getElementById('btn-export'),
+      fontDecrease: document.getElementById('font-decrease'),
+      fontIncrease: document.getElementById('font-increase'),
+      fontSizeLabel: document.getElementById('font-size-label')
+    };
+
+    function showToast(msg) {
+      el.toast.textContent = msg;
+      el.toast.classList.add('show');
+      setTimeout(() => el.toast.classList.remove('show'), 2000);
+    }
+
+    function escapeHtml(text) {
+      return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function escapeRegex(str) {
+      return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    // Process metadata in text
+    function processMetadata(text) {
+      let result = text;
+      const opts = state.metaOptions;
+
+      // ## Approved / ## Response
+      if (opts.hideApproved) {
+        result = result.replace(/^## Approved\s*$/gm, '');
+        result = result.replace(/^## Response\s*$/gm, '');
+      }
+
+      // ✔✔ checkmarks
+      if (opts.hideCheckmarks) {
+        result = result.replace(/✔✔\s*/g, '');
+      }
+
+      // 🗿 moai lines
+      if (opts.hideMoai) {
+        result = result.replace(/^!?[🗿]+!?\s*$/gm, '');
+      }
+
+      // <tags>
+      if (opts.hideTags) {
+        result = result.replace(/<[^>]+>\s*/g, '');
+      }
+
+      // TimeInfo handling
+      if (opts.timeinfo === 'hide') {
+        result = result.replace(/^## TimeInfo\s*\n?\[.*?\]\s*$/gm, '');
+      } else if (opts.timeinfo === 'pretty') {
+        result = result.replace(/^## TimeInfo\s*\n?\[(.*?)\]\s*$/gm, (match, content) => {
+          return `[[TIMEINFO_PRETTY:${content}]]`;
+        });
+      }
+      // 'raw' keeps as is
+
+      // Clean up multiple empty lines
+      result = result.replace(/\n{4,}/g, '\n\n\n');
+
+      return result;
+    }
+
+    // Parse TimeInfo into pretty HTML with SVG icons
+    function formatTimeInfoPretty(content) {
+      const parts = content.split('|');
+      let html = '<div class="timeinfo-box">';
+      
+      parts.forEach(part => {
+        const [key, ...valueParts] = part.split(':');
+        const value = valueParts.join(':').trim();
+        const keyOriginal = key.trim();
+        const keyLower = keyOriginal.toLowerCase();
+        
+        let icon = icons.time;  // 기본값을 시계로
+        let displayValue = value;
+        
+        // 아이콘 결정 로직
+        if (keyLower.includes('time') || keyLower.match(/^\d{4}/)) {
+          icon = icons.time;
+        } else if (keyLower.includes('location') {
+          icon = icons.location;
+        } else if (keyLower.includes('belonging') || keyOriginal.startsWith('(')) {
+          icon = icons.belongings;
+        } else if (keyOriginal.includes('{{char}}') || keyOriginal.includes("'s outfit")) {
+          icon = icons.char;
+        } else if (keyOriginal.includes('{{user}}') || keyLower.includes('user') {
+          icon = icons.user;
+        }
+        
+        // {{char}}, {{user}} 관련 outfit 처리
+        if (keyOriginal.includes("'s outfit")) {
+          const name = keyOriginal.replace("'s outfit", '').trim();
+          if (name === '{{char}}') {
+            icon = icons.char;
+          } else if (name === '{{user}}' || name === 'user') {
+            icon = icons.user;
+          }
+          html += `<div class="ti-row"><span class="ti-icon">${icon}</span><span class="ti-value">${displayValue}</span></div>`;
+        } else if (!keyLower.includes('outfit')) {
+          // 일반 항목: 값이 있으면 값을, 없으면 키 전체를 표시
+          html += `<div class="ti-row"><span class="ti-icon">${icon}</span><span class="ti-value">${value || keyOriginal}</span></div>`;
+        }
+      });
+      
+      html += '</div>';
+      return html;
+    }
+
+    // Format text with indexed speaker lines
+    function formatTextWithIndex(text) {
+      // First process metadata
+      let processed = processMetadata(text);
+      
+      const escaped = escapeHtml(processed);
+      let index = 0;
+      
+      // Replace speaker lines with indexed version
+      let result = escaped.replace(/^--([^\n]+)$/gm, (match, name) => {
+        index++;
+        return `<span class="speaker-line" data-index="${index}"><span class="index-num">#${index}</span>${name.trim()}</span>`;
+      });
+
+      // Replace TimeInfo pretty markers
+      result = result.replace(/\[\[TIMEINFO_PRETTY:(.*?)\]\]/g, (match, content) => {
+        return formatTimeInfoPretty(content);
+      });
+
+      return result;
+    }
+
+    function applyRules(text) {
+      let result = text;
+      // 추가 치환 먼저 적용 (김소넷 → 김{{user}} 등)
+      const rules = [
+        ...state.extraRules,
+        { from: el.name1.value, to: el.replace1.value },
+        { from: el.name2.value, to: el.replace2.value }
+      ];
+      rules.forEach(r => {
+        if (r.from && r.from.trim()) {
+          result = result.replace(new RegExp(escapeRegex(r.from), 'g'), r.to);
+        }
+      });
+      return result;
+    }
+
+    function renderExtraRules() {
+      el.extraRulesList.innerHTML = state.extraRules.map((r, i) => `
+        <div class="extra-rule-row">
+          <input type="text" class="rule-input extra-from" data-i="${i}" value="${r.from}" placeholder="원본">
+          <span class="rule-arrow">→</span>
+          <input type="text" class="rule-input extra-to" data-i="${i}" value="${r.to}" placeholder="치환">
+          <button class="btn-remove" data-i="${i}">✕</button>
+        </div>
+      `).join('');
+
+      el.extraRulesList.querySelectorAll('.extra-from').forEach(inp => {
+        inp.addEventListener('input', e => state.extraRules[e.target.dataset.i].from = e.target.value);
+      });
+      el.extraRulesList.querySelectorAll('.extra-to').forEach(inp => {
+        inp.addEventListener('input', e => state.extraRules[e.target.dataset.i].to = e.target.value);
+      });
+      el.extraRulesList.querySelectorAll('.btn-remove').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.extraRules.splice(btn.dataset.i, 1);
+          renderExtraRules();
+        });
+      });
+    }
+
+    function updateDisplay(panel) {
+      if (panel === 'a' || panel === 'both') {
+        const text = applyRules(state.originalTextA);
+        state.formattedHtmlA = formatTextWithIndex(text);
+        state.speakerCountA = (text.match(/^--/gm) || []).length;
+      }
+      if (panel === 'b' || panel === 'both') {
+        const text = applyRules(state.originalTextB);
+        state.formattedHtmlB = formatTextWithIndex(text);
+        state.speakerCountB = (text.match(/^--/gm) || []).length;
+      }
+      
+      applyPagination();
+    }
+
+    function applyPagination() {
+      const pageSize = state.pagination.pageSize;
+      const maxSpeakers = Math.max(state.speakerCountA, state.speakerCountB);
+      
+      if (pageSize === 0 || maxSpeakers === 0) {
+        // 전체 보기
+        el.viewA.innerHTML = state.formattedHtmlA;
+        el.viewB.innerHTML = state.formattedHtmlB;
+        state.pagination.totalPages = 1;
+        state.pagination.currentPage = 1;
+        updatePageInfo();
+        return;
+      }
+
+      state.pagination.totalPages = Math.ceil(maxSpeakers / pageSize);
+      if (state.pagination.currentPage > state.pagination.totalPages) {
+        state.pagination.currentPage = state.pagination.totalPages;
+      }
+
+      const startIdx = (state.pagination.currentPage - 1) * pageSize + 1;
+      const endIdx = state.pagination.currentPage * pageSize;
+
+      el.viewA.innerHTML = getContentByRange(state.formattedHtmlA, startIdx, endIdx);
+      el.viewB.innerHTML = getContentByRange(state.formattedHtmlB, startIdx, endIdx);
+      
+      updatePageInfo();
+    }
+
+    function updatePageInfo() {
+      const { currentPage, totalPages, pageSize } = state.pagination;
+      if (pageSize === 0) {
+        el.pageInfo.textContent = '';
+        el.pagePrev.disabled = true;
+        el.pageNext.disabled = true;
+      } else {
+        el.pageInfo.textContent = `${currentPage}/${totalPages}`;
+        el.pagePrev.disabled = currentPage <= 1;
+        el.pageNext.disabled = currentPage >= totalPages;
+      }
+    }
+
+    function changePage(delta) {
+      const newPage = state.pagination.currentPage + delta;
+      if (newPage >= 1 && newPage <= state.pagination.totalPages) {
+        state.pagination.currentPage = newPage;
+        applyPagination();
+        // 스크롤 맨 위로
+        el.viewA.scrollTop = 0;
+        el.viewB.scrollTop = 0;
+      }
+    }
+
+    function loadFile(file, panel) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        const text = e.target.result;
+        if (panel === 'a') {
+          state.originalTextA = text;
+          state.filenameA = file.name;
+          el.filenameA.textContent = file.name;
+          el.viewA.classList.remove('hidden');
+          el.zoneA.classList.add('hidden');
+          el.clearA.style.display = 'block';
+          updateDisplay('a');
+        } else {
+          state.originalTextB = text;
+          state.filenameB = file.name;
+          el.filenameB.textContent = file.name;
+          el.viewB.classList.remove('hidden');
+          el.zoneB.classList.add('hidden');
+          el.clearB.style.display = 'block';
+          updateDisplay('b');
+        }
+        autoDetectSpeakers(text);
+      };
+      reader.readAsText(file);
+    }
+
+    function autoDetectSpeakers(text) {
+      const matches = text.match(/^--([^\n]+)$/gm);
+      if (matches) {
+        const names = [...new Set(matches.map(m => m.replace('--', '').trim()))];
+        if (names[0] && !el.name1.value) el.name1.value = names[0];
+        if (names[1] && !el.name2.value) el.name2.value = names[1];
+      }
+    }
+
+    function clearPanel(panel) {
+      if (panel === 'a') {
+        state.originalTextA = '';
+        state.formattedHtmlA = '';
+        state.filenameA = '';
+        el.viewA.innerHTML = '';
+        el.viewA.classList.add('hidden');
+        el.zoneA.classList.remove('hidden');
+        el.filenameA.textContent = '';
+        el.clearA.style.display = 'none';
+        el.inputA.value = '';
+      } else {
+        state.originalTextB = '';
+        state.formattedHtmlB = '';
+        state.filenameB = '';
+        el.viewB.innerHTML = '';
+        el.viewB.classList.add('hidden');
+        el.zoneB.classList.remove('hidden');
+        el.filenameB.textContent = '';
+        el.clearB.style.display = 'none';
+        el.inputB.value = '';
+      }
+    }
+
+    function syncScroll(src, tgt) {
+      if (!state.syncEnabled || state.isScrolling) return;
+      state.isScrolling = true;
+      const srcMax = src.scrollHeight - src.clientHeight;
+      const tgtMax = tgt.scrollHeight - tgt.clientHeight;
+      if (srcMax > 0 && tgtMax > 0) {
+        tgt.scrollTop = (src.scrollTop / srcMax) * tgtMax;
+      }
+      el.syncIndicator.classList.add('show');
+      clearTimeout(window.st);
+      window.st = setTimeout(() => el.syncIndicator.classList.remove('show'), 500);
+      requestAnimationFrame(() => state.isScrolling = false);
+    }
+
+    function setViewMode(mode) {
+      state.viewMode = mode;
+      document.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector(`.view-toggle-btn[data-view="${mode}"]`).classList.add('active');
+
+      const panelA = document.querySelector('.panel-a');
+      const panelB = document.querySelector('.panel-b');
+
+      if (mode === 'dual') {
+        el.mainContainer.classList.remove('single-view');
+        panelA.classList.add('active');
+        panelB.classList.add('active');
+      } else if (mode === 'single-a') {
+        el.mainContainer.classList.add('single-view');
+        panelA.classList.add('active');
+        panelB.classList.remove('active');
+      } else if (mode === 'single-b') {
+        el.mainContainer.classList.add('single-view');
+        panelA.classList.remove('active');
+        panelB.classList.add('active');
+      }
+    }
+
+    // Capture with range
+    function getContentByRange(html, start, end) {
+      const temp = document.createElement('div');
+      temp.innerHTML = html;
+      const speakers = temp.querySelectorAll('.speaker-line');
+      if (speakers.length === 0) return html;
+
+      const actualEnd = end || speakers.length;
+      let capturing = false;
+      let result = '';
+
+      temp.childNodes.forEach(node => {
+        if (node.nodeType === Node.ELEMENT_NODE && node.classList?.contains('speaker-line')) {
+          const idx = parseInt(node.dataset.index);
+          if (idx >= start && idx <= actualEnd) {
+            capturing = true;
+            result += node.outerHTML;
+          } else if (idx > actualEnd) {
+            capturing = false;
+          } else {
+            capturing = false;
+          }
+        } else if (capturing) {
+          result += node.nodeType === Node.TEXT_NODE ? node.textContent : node.outerHTML;
+        }
+      });
+
+      return result || html;
+    }
+
+    function openCapture() {
+      if (!state.originalTextA && !state.originalTextB) {
+        showToast('텍스트를 먼저 불러와주세요');
+        return;
+      }
+
+      const maxCount = Math.max(state.speakerCountA, state.speakerCountB);
+      el.rangeEnd.placeholder = maxCount || '끝';
+      el.rangeEnd.value = '';
+      el.rangeStart.value = '1';
+
+      el.captureTextA.innerHTML = el.viewA.innerHTML || '(없음)';
+      el.captureTextB.innerHTML = el.viewB.innerHTML || '(없음)';
+
+      updateCaptureMode();
+      el.captureModal.classList.add('open');
+    }
+
+    function updateCaptureMode() {
+      el.captureGrid.className = `capture-grid ${state.captureMode}`;
+    }
+
+    function applyRange() {
+      const start = parseInt(el.rangeStart.value) || 1;
+      const end = parseInt(el.rangeEnd.value) || null;
+
+      el.captureTextA.innerHTML = getContentByRange(el.viewA.innerHTML, start, end) || '(없음)';
+      el.captureTextB.innerHTML = getContentByRange(el.viewB.innerHTML, start, end) || '(없음)';
+      showToast(`#${start}~${end || '끝'} 구간 적용`);
+    }
+
+    async function downloadCapture() {
+      el.btnDownload.textContent = '생성 중...';
+      try {
+        const canvas = await html2canvas(document.getElementById('capture-target'), {
+          backgroundColor: '#fff',
+          scale: 2
+        });
+        const link = document.createElement('a');
+        link.download = `비교_${new Date().toISOString().slice(0,10)}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        showToast('저장 완료');
+      } catch (e) {
+        showToast('캡처 실패');
+      }
+      el.btnDownload.textContent = '💾 저장';
+    }
+
+    function setupDragDrop(zone, panel) {
+      zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+      zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+      zone.addEventListener('drop', e => {
+        e.preventDefault();
+        zone.classList.remove('dragover');
+        loadFile(e.dataTransfer.files[0], panel);
+      });
+      zone.addEventListener('click', () => {
+        document.getElementById(`input-${panel}`).click();
+      });
+    }
+
+    // Highlight
+    function applyHighlight(color) {
+      const sel = window.getSelection();
+      if (!sel.rangeCount || sel.isCollapsed) return;
+      const range = sel.getRangeAt(0);
+      const container = range.commonAncestorContainer;
+      if (!el.viewA.contains(container) && !el.viewB.contains(container)) return;
+
+      try {
+        const mark = document.createElement('mark');
+        mark.className = color;
+        range.surroundContents(mark);
+        sel.removeAllRanges();
+        el.highlightToolbar.classList.remove('show');
+      } catch {
+        showToast('문장 단위로 선택해주세요');
+      }
+    }
+
+    function clearHighlights() {
+      [el.viewA, el.viewB].forEach(view => {
+        view.querySelectorAll('mark').forEach(m => {
+          const txt = document.createTextNode(m.textContent);
+          m.parentNode.replaceChild(txt, m);
+        });
+      });
+      showToast('하이라이트 초기화');
+    }
+
+    function init() {
+      setupDragDrop(el.zoneA, 'a');
+      setupDragDrop(el.zoneB, 'b');
+
+      el.inputA.addEventListener('change', e => loadFile(e.target.files[0], 'a'));
+      el.inputB.addEventListener('change', e => loadFile(e.target.files[0], 'b'));
+      el.loadA.addEventListener('click', () => el.inputA.click());
+      el.loadB.addEventListener('click', () => el.inputB.click());
+      el.clearA.addEventListener('click', () => clearPanel('a'));
+      el.clearB.addEventListener('click', () => clearPanel('b'));
+
+      el.viewA.addEventListener('scroll', () => syncScroll(el.viewA, el.viewB));
+      el.viewB.addEventListener('scroll', () => syncScroll(el.viewB, el.viewA));
+
+      el.btnSync.addEventListener('click', () => {
+        state.syncEnabled = !state.syncEnabled;
+        el.btnSync.classList.toggle('active', state.syncEnabled);
+        el.btnSync.textContent = state.syncEnabled ? '🔗 동기화' : '🔓 해제됨';
+      });
+
+      // View mode
+      document.querySelectorAll('.view-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', () => setViewMode(btn.dataset.view));
+      });
+
+      // Rules
+      el.btnRules.addEventListener('click', () => {
+        el.rulesPanel.classList.toggle('open');
+        el.metaPanel.classList.remove('open');
+      });
+      el.btnSwap.addEventListener('click', () => {
+        [el.replace1.value, el.replace2.value] = [el.replace2.value, el.replace1.value];
+        showToast('스왑 완료');
+      });
+      el.btnAddRule.addEventListener('click', () => {
+        state.extraRules.push({ from: '', to: '' });
+        renderExtraRules();
+      });
+      el.btnApplyRules.addEventListener('click', () => {
+        updateDisplay('both');
+        el.rulesPanel.classList.remove('open');
+        showToast('치환 적용됨');
+      });
+      el.btnResetText.addEventListener('click', () => {
+        el.name1.value = '';
+        el.name2.value = '';
+        el.replace1.value = '{{char}}';
+        el.replace2.value = '{{user}}';
+        state.extraRules = [];
+        renderExtraRules();
+        updateDisplay('both');
+        showToast('원본 복원');
+      });
+
+      // Capture
+      el.btnCapture.addEventListener('click', openCapture);
+      el.btnCloseCapture.addEventListener('click', () => el.captureModal.classList.remove('open'));
+      el.captureModal.addEventListener('click', e => {
+        if (e.target === el.captureModal) el.captureModal.classList.remove('open');
+      });
+      el.btnDownload.addEventListener('click', downloadCapture);
+      el.btnApplyRange.addEventListener('click', applyRange);
+
+      document.querySelectorAll('.capture-mode-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.capture-mode-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          state.captureMode = btn.dataset.mode;
+          updateCaptureMode();
+        });
+      });
+
+      // Highlight
+      document.addEventListener('selectionchange', () => {
+        const sel = window.getSelection();
+        if (sel.isCollapsed || !sel.toString().trim()) {
+          setTimeout(() => el.highlightToolbar.classList.remove('show'), 150);
+          return;
+        }
+        const container = sel.getRangeAt(0).commonAncestorContainer;
+        if (el.viewA.contains(container) || el.viewB.contains(container)) {
+          el.highlightToolbar.classList.add('show');
+        }
+      });
+
+      document.querySelectorAll('.highlight-color').forEach(btn => {
+        btn.addEventListener('click', () => applyHighlight(btn.dataset.color));
+      });
+      el.btnClearHl.addEventListener('click', () => {
+        clearHighlights();
+        el.highlightToolbar.classList.remove('show');
+      });
+
+      el.btnHome.addEventListener('click', () => {
+        window.location.href = 'https://toastout.github.io/toast/';
+      });
+
+      // 복사 기능
+      el.btnCopy.addEventListener('click', () => {
+        copyText();
+      });
+
+      async function copyText() {
+        const getPlainText = (view) => {
+          let text = '';
+          const walk = (node) => {
+            if (node.nodeType === Node.TEXT_NODE) {
+              text += node.textContent;
+            } else if (node.nodeName === 'BR') {
+              text += '\n';
+            } else if (node.classList?.contains('speaker-line')) {
+              const idx = node.querySelector('.index-num');
+              const name = node.textContent.replace(idx?.textContent || '', '').trim();
+              text += '\n--' + name + '\n';
+            } else if (node.classList?.contains('timeinfo-box')) {
+              // TimeInfo 건너뜀
+            } else if (node.childNodes) {
+              node.childNodes.forEach(walk);
+            }
+          };
+          view.childNodes.forEach(walk);
+          return text.trim();
+        };
+
+        const textA = el.viewA.innerHTML ? getPlainText(el.viewA) : '';
+        const textB = el.viewB.innerHTML ? getPlainText(el.viewB) : '';
+
+        if (!textA && !textB) {
+          showToast('복사할 텍스트가 없어요');
+          return;
+        }
+
+        let copyContent = '';
+        if (textA && textB) {
+          const choice = confirm('A 텍스트를 복사할까요?\n(취소 시 B 텍스트 복사)');
+          copyContent = choice ? textA : textB;
+        } else {
+          copyContent = textA || textB;
+        }
+
+        try {
+          await navigator.clipboard.writeText(copyContent);
+          showToast('📋 클립보드에 복사됨!');
+        } catch (e) {
+          // fallback
+          const ta = document.createElement('textarea');
+          ta.value = copyContent;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          showToast('📋 클립보드에 복사됨!');
+        }
+      }
+
+      // Meta panel
+      el.btnMeta.addEventListener('click', () => {
+        el.metaPanel.classList.toggle('open');
+        el.rulesPanel.classList.remove('open');
+      });
+
+      // Font size control
+      const fontSizes = [
+        { size: '0.75rem', label: '작게' },
+        { size: '0.82rem', label: '조금 작게' },
+        { size: '0.9rem', label: '중' },
+        { size: '1rem', label: '조금 크게' },
+        { size: '1.1rem', label: '크게' }
+      ];
+
+      function updateFontSize() {
+        const fs = fontSizes[state.fontSize];
+        el.viewA.style.fontSize = fs.size;
+        el.viewB.style.fontSize = fs.size;
+        el.fontSizeLabel.textContent = fs.label;
+      }
+
+      el.fontDecrease.addEventListener('click', () => {
+        if (state.fontSize > 0) {
+          state.fontSize--;
+          updateFontSize();
+        }
+      });
+
+      el.fontIncrease.addEventListener('click', () => {
+        if (state.fontSize < fontSizes.length - 1) {
+          state.fontSize++;
+          updateFontSize();
+        }
+      });
+
+      el.btnMetaApply.addEventListener('click', () => {
+        state.metaOptions.timeinfo = el.optTimeinfoStyle.value;
+        state.metaOptions.hideApproved = el.optApproved.checked;
+        state.metaOptions.hideCheckmarks = el.optCheckmarks.checked;
+        state.metaOptions.hideMoai = el.optMoai.checked;
+        state.metaOptions.hideTags = el.optTags.checked;
+        updateDisplay('both');
+        el.metaPanel.classList.remove('open');
+        showToast('메타 옵션 적용됨');
+      });
+
+      el.btnMetaReset.addEventListener('click', () => {
+        el.optTimeinfoStyle.value = 'pretty';
+        el.optApproved.checked = true;
+        el.optCheckmarks.checked = true;
+        el.optMoai.checked = true;
+        el.optTags.checked = true;
+        state.metaOptions = {
+          timeinfo: 'pretty',
+          hideApproved: true,
+          hideCheckmarks: true,
+          hideMoai: true,
+          hideTags: true
+        };
+        updateDisplay('both');
+        showToast('기본값 복원');
+      });
+
+      // Initialize meta checkboxes
+      el.optApproved.checked = state.metaOptions.hideApproved;
+      el.optCheckmarks.checked = state.metaOptions.hideCheckmarks;
+      el.optMoai.checked = state.metaOptions.hideMoai;
+      el.optTags.checked = state.metaOptions.hideTags;
+      el.optTimeinfoStyle.value = state.metaOptions.timeinfo;
+
+      // Pagination
+      el.pageSize.addEventListener('change', () => {
+        if (el.pageSize.value === 'custom') {
+          el.pageCustom.style.display = 'block';
+          el.pageCustom.focus();
+        } else {
+          el.pageCustom.style.display = 'none';
+          state.pagination.pageSize = parseInt(el.pageSize.value);
+          state.pagination.currentPage = 1;
+          applyPagination();
+        }
+      });
+
+      el.pageCustom.addEventListener('change', () => {
+        const val = parseInt(el.pageCustom.value);
+        if (val > 0) {
+          state.pagination.pageSize = val;
+          state.pagination.currentPage = 1;
+          applyPagination();
+        }
+      });
+
+      el.pageCustom.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.target.blur();
+        }
+      });
+
+      el.pagePrev.addEventListener('click', () => changePage(-1));
+      el.pageNext.addEventListener('click', () => changePage(1));
+
+      // Keyboard navigation for pages
+      document.addEventListener('keydown', (e) => {
+        if (state.pagination.pageSize === 0) return;
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        if (state.editMode) return;
+        
+        if (e.key === 'ArrowLeft' || e.key === ',') {
+          changePage(-1);
+        } else if (e.key === 'ArrowRight' || e.key === '.') {
+          changePage(1);
+        }
+      });
+
+      // Edit mode
+      el.btnEdit.addEventListener('click', () => {
+        state.editMode = true;
+        el.editToolbar.classList.add('show');
+        el.btnEdit.classList.add('active');
+        el.viewA.contentEditable = true;
+        el.viewB.contentEditable = true;
+        el.viewA.classList.add('editable');
+        el.viewB.classList.add('editable');
+        showToast('편집 모드 활성화');
+      });
+
+      el.btnEditCancel.addEventListener('click', () => {
+        exitEditMode();
+        updateDisplay('both');
+        showToast('편집 취소됨');
+      });
+
+      el.btnExport.addEventListener('click', () => {
+        exportText();
+      });
+
+      function exitEditMode() {
+        state.editMode = false;
+        el.editToolbar.classList.remove('show');
+        el.btnEdit.classList.remove('active');
+        el.viewA.contentEditable = false;
+        el.viewB.contentEditable = false;
+        el.viewA.classList.remove('editable');
+        el.viewB.classList.remove('editable');
+      }
+
+      function exportText() {
+        // 편집된 텍스트 추출 (HTML -> 텍스트)
+        const getPlainText = (view) => {
+          let text = '';
+          view.childNodes.forEach(node => {
+            if (node.nodeType === Node.TEXT_NODE) {
+              text += node.textContent;
+            } else if (node.classList?.contains('speaker-line')) {
+              const idx = node.querySelector('.index-num');
+              const name = node.textContent.replace(idx?.textContent || '', '').trim();
+              text += '\n--' + name + '\n';
+            } else if (node.classList?.contains('timeinfo-box')) {
+              // TimeInfo는 건너뜀 (이미 처리됨)
+            } else if (node.nodeName === 'BR') {
+              text += '\n';
+            } else {
+              text += node.textContent;
+            }
+          });
+          return text.trim();
+        };
+
+        const textA = getPlainText(el.viewA);
+        const textB = getPlainText(el.viewB);
+        
+        // 둘 중 하나만 있으면 그것만, 둘 다 있으면 선택
+        let exportContent = '';
+        let filename = '편집본';
+        
+        if (textA && textB) {
+          const choice = confirm('A 텍스트를 저장하시겠습니까?\n(취소 시 B 텍스트 저장)');
+          exportContent = choice ? textA : textB;
+          filename = choice ? (state.filenameA || 'A_편집본') : (state.filenameB || 'B_편집본');
+        } else if (textA) {
+          exportContent = textA;
+          filename = state.filenameA || 'A_편집본';
+        } else if (textB) {
+          exportContent = textB;
+          filename = state.filenameB || 'B_편집본';
+        }
+
+        if (!exportContent) {
+          showToast('내보낼 텍스트가 없어요');
+          return;
+        }
+
+        // 파일명에서 확장자 제거 후 _편집본 추가
+        filename = filename.replace(/\.txt$/i, '') + '_편집본.txt';
+        
+        const blob = new Blob([exportContent], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        showToast('저장 완료: ' + filename);
+        exitEditMode();
+      }
+
+      updatePageInfo();
+      renderExtraRules();
+    }
+
+    init();
+  </script>
+</body>
+</html>
