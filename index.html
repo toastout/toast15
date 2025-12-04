@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <!-- v4.9 배우 대기실 - iOS 파일 선택 버그 수정 -->
+  <!-- v5.0 배우 대기실 - TimeInfo 분리 처리, ◌◌ 숨기기 추가 -->
   <title>📜 배우 대기실</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   
@@ -1052,6 +1052,11 @@
         <span class="meta-hint">숨기기</span>
       </label>
       <label class="meta-option">
+        <input type="checkbox" id="opt-circles">
+        <span class="meta-label">◌◌ 구분선 (원형)</span>
+        <span class="meta-hint">숨기기</span>
+      </label>
+      <label class="meta-option">
         <input type="checkbox" id="opt-tags">
         <span class="meta-label">&lt;태그&gt; HTML 태그</span>
         <span class="meta-hint">숨기기</span>
@@ -1186,6 +1191,7 @@
         hideApproved: true,
         hideCheckmarks: true,
         hideMoai: true,
+        hideCircles: true,
         hideTags: true
       },
       pagination: {
@@ -1255,6 +1261,7 @@
       optApproved: document.getElementById('opt-approved'),
       optCheckmarks: document.getElementById('opt-checkmarks'),
       optMoai: document.getElementById('opt-moai'),
+      optCircles: document.getElementById('opt-circles'),
       optTags: document.getElementById('opt-tags'),
       btnMetaApply: document.getElementById('btn-meta-apply'),
       btnMetaReset: document.getElementById('btn-meta-reset'),
@@ -1308,16 +1315,27 @@
         result = result.replace(/^!?[🗿]+!?\s*$/gm, '');
       }
 
+      // ◌◌ circles
+      if (opts.hideCircles) {
+        result = result.replace(/^◌+\s*$/gm, '');
+      }
+
       // <tags>
       if (opts.hideTags) {
         result = result.replace(/<[^>]+>\s*/g, '');
       }
 
-      // TimeInfo handling
+      // TimeInfo handling - ## TimeInfo는 항상 제거, [Time:...] 대괄호만 처리
       if (opts.timeinfo === 'hide') {
-        result = result.replace(/^## TimeInfo\s*\n?\[.*?\]\s*$/gm, '');
+        // ## TimeInfo 제거
+        result = result.replace(/^## TimeInfo\s*$/gm, '');
+        // [Time:...] 대괄호도 제거
+        result = result.replace(/^\[Time:.*?\]\s*$/gm, '');
       } else if (opts.timeinfo === 'pretty') {
-        result = result.replace(/^## TimeInfo\s*\n?\[(.*?)\]\s*$/gm, (match, content) => {
+        // ## TimeInfo 텍스트는 제거
+        result = result.replace(/^## TimeInfo\s*$/gm, '');
+        // [Time:...] 대괄호만 예쁘게 변환
+        result = result.replace(/^\[(Time:.*?)\]\s*$/gm, (match, content) => {
           return `[[TIMEINFO_PRETTY:${content}]]`;
         });
       }
@@ -1915,6 +1933,7 @@
         state.metaOptions.hideApproved = el.optApproved.checked;
         state.metaOptions.hideCheckmarks = el.optCheckmarks.checked;
         state.metaOptions.hideMoai = el.optMoai.checked;
+        state.metaOptions.hideCircles = el.optCircles.checked;
         state.metaOptions.hideTags = el.optTags.checked;
         updateDisplay('both');
         el.metaPanel.classList.remove('open');
@@ -1926,12 +1945,14 @@
         el.optApproved.checked = true;
         el.optCheckmarks.checked = true;
         el.optMoai.checked = true;
+        el.optCircles.checked = true;
         el.optTags.checked = true;
         state.metaOptions = {
           timeinfo: 'pretty',
           hideApproved: true,
           hideCheckmarks: true,
           hideMoai: true,
+          hideCircles: true,
           hideTags: true
         };
         updateDisplay('both');
@@ -1942,6 +1963,7 @@
       el.optApproved.checked = state.metaOptions.hideApproved;
       el.optCheckmarks.checked = state.metaOptions.hideCheckmarks;
       el.optMoai.checked = state.metaOptions.hideMoai;
+      el.optCircles.checked = state.metaOptions.hideCircles;
       el.optTags.checked = state.metaOptions.hideTags;
       el.optTimeinfoStyle.value = state.metaOptions.timeinfo;
 
