@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <!-- v4.8 배우 대기실 - user 아이콘 버그 수정, default 제거 -->
+  <!-- v4.9 배우 대기실 - iOS 파일 선택 버그 수정 -->
   <title>📜 배우 대기실</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   
@@ -918,7 +918,18 @@
       .capture-grid.horizontal .capture-panel-a { border-right: none; border-bottom: 1px solid var(--border); }
     }
 
-    input[type="file"] { display: none; }
+    /* iOS 파일 선택 호환성 - sr-only 패턴 */
+    input[type="file"] { 
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
   </style>
   
   <!-- 캡처용 라이브러리 -->
@@ -1060,19 +1071,19 @@
           <span class="panel-filename" id="filename-a"></span>
         </div>
         <div class="panel-actions">
-          <button class="btn btn-sm" id="load-a">📂</button>
+          <label class="btn btn-sm" id="load-a" for="input-a">📂</label>
           <button class="btn btn-sm" id="clear-a" style="display:none;">✕</button>
         </div>
       </div>
       <div class="panel-content">
-        <div class="upload-zone" id="zone-a">
+        <label class="upload-zone" id="zone-a" for="input-a">
           <div class="upload-icon">📄</div>
           <div class="upload-text">파일 드래그 또는 클릭</div>
           <div class="upload-hint">.txt</div>
-        </div>
+        </label>
         <div class="text-view hidden" id="view-a"></div>
       </div>
-      <input type="file" id="input-a" accept=".txt">
+      <input type="file" id="input-a" accept=".txt,.md,text/*">
     </div>
 
     <div class="panel panel-b active">
@@ -1082,19 +1093,19 @@
           <span class="panel-filename" id="filename-b"></span>
         </div>
         <div class="panel-actions">
-          <button class="btn btn-sm" id="load-b">📂</button>
+          <label class="btn btn-sm" id="load-b" for="input-b">📂</label>
           <button class="btn btn-sm" id="clear-b" style="display:none;">✕</button>
         </div>
       </div>
       <div class="panel-content">
-        <div class="upload-zone" id="zone-b">
+        <label class="upload-zone" id="zone-b" for="input-b">
           <div class="upload-icon">📄</div>
           <div class="upload-text">파일 드래그 또는 클릭</div>
           <div class="upload-hint">.txt</div>
-        </div>
+        </label>
         <div class="text-view hidden" id="view-b"></div>
       </div>
-      <input type="file" id="input-b" accept=".txt">
+      <input type="file" id="input-b" accept=".txt,.md,text/*">
     </div>
   </main>
 
@@ -1677,9 +1688,7 @@
         zone.classList.remove('dragover');
         loadFile(e.dataTransfer.files[0], panel);
       });
-      zone.addEventListener('click', () => {
-        document.getElementById(`input-${panel}`).click();
-      });
+      // label for="input-*"가 클릭을 처리하므로 별도 click 이벤트 불필요
     }
 
     // Highlight
@@ -1717,8 +1726,7 @@
 
       el.inputA.addEventListener('change', e => loadFile(e.target.files[0], 'a'));
       el.inputB.addEventListener('change', e => loadFile(e.target.files[0], 'b'));
-      el.loadA.addEventListener('click', () => el.inputA.click());
-      el.loadB.addEventListener('click', () => el.inputB.click());
+      // label for="input-*"가 클릭을 처리하므로 loadA/loadB click 불필요
       el.clearA.addEventListener('click', () => clearPanel('a'));
       el.clearB.addEventListener('click', () => clearPanel('b'));
 
