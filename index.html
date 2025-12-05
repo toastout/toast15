@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <!-- v5.0 배우 대기실 - TimeInfo 분리 처리, ◌◌ 숨기기 추가 -->
+  <!-- v5.1 배우 대기실 - iOS 캡처 새 창 방식, 새 글 작성 기능 -->
   <title>📜 배우 대기실</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   
@@ -967,6 +967,7 @@
       <button class="btn" id="btn-meta">🏷️ 메타</button>
       <button class="btn" id="btn-rules">🔄 치환</button>
       <button class="btn" id="btn-copy">📋 복사</button>
+      <button class="btn" id="btn-new">📝 새 글</button>
       <button class="btn" id="btn-edit">✏️ 편집</button>
       <button class="btn" id="btn-sync">🔗 동기화</button>
       <button class="btn btn-primary" id="btn-capture">📸 캡처</button>
@@ -976,8 +977,8 @@
   <!-- Edit Toolbar -->
   <div class="edit-toolbar" id="edit-toolbar">
     <div class="edit-toolbar-left">
-      <span>✏️ 편집 모드</span>
-      <span style="opacity:0.7;font-size:0.75rem;">— 텍스트를 직접 수정할 수 있어요</span>
+      <span id="edit-toolbar-title">✏️ 편집 모드</span>
+      <span style="opacity:0.7;font-size:0.75rem;" id="edit-toolbar-hint">— 텍스트를 직접 수정할 수 있어요</span>
     </div>
     <div class="edit-toolbar-right">
       <button class="btn-edit-action" id="btn-edit-cancel">취소</button>
@@ -1200,6 +1201,7 @@
         totalPages: 1
       },
       editMode: false,
+      newMode: false,  // 새 글 작성 모드
       fontSize: 2  // 0:작게, 1:조금작게, 2:중, 3:조금크게, 4:크게
     };
 
@@ -1277,7 +1279,10 @@
       btnExport: document.getElementById('btn-export'),
       fontDecrease: document.getElementById('font-decrease'),
       fontIncrease: document.getElementById('font-increase'),
-      fontSizeLabel: document.getElementById('font-size-label')
+      fontSizeLabel: document.getElementById('font-size-label'),
+      btnNew: document.getElementById('btn-new'),
+      editToolbarTitle: document.getElementById('edit-toolbar-title'),
+      editToolbarHint: document.getElementById('edit-toolbar-hint')
     };
 
     function showToast(msg) {
@@ -1680,7 +1685,20 @@
       showToast(`#${start}~${end || '끝'} 구간 적용`);
     }
 
+    // iOS 감지
+    function isIOS() {
+      return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+             (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    }
+
     async function downloadCapture() {
+      // iOS: 새 창으로 열기 (스크린샷 유도)
+      if (isIOS()) {
+        openCaptureInNewWindow();
+        return;
+      }
+      
+      // 데스크톱/안드로이드: html2canvas 사용
       el.btnDownload.textContent = '생성 중...';
       try {
         const canvas = await html2canvas(document.getElementById('capture-target'), {
@@ -1696,6 +1714,122 @@
         showToast('캡처 실패');
       }
       el.btnDownload.textContent = '💾 저장';
+    }
+
+    // iOS용 새 창 캡처
+    function openCaptureInNewWindow() {
+      const captureTarget = document.getElementById('capture-target');
+      const content = captureTarget.innerHTML;
+      const isHorizontal = state.captureMode === 'horizontal';
+      
+      const html = `
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>📸 캡처 - 스크린샷으로 저장하세요</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    @font-face {
+      font-family: 'Ridibatang';
+      src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_twelve@1.0/RIDIBatang.woff') format('woff');
+      font-weight: normal;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'IBM Plex Sans KR', sans-serif;
+      background: #f8f6f1;
+      padding: 20px;
+    }
+    .notice {
+      background: #5c6bc0;
+      color: white;
+      padding: 15px 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      text-align: center;
+      font-size: 0.9rem;
+    }
+    .capture-content {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .capture-grid {
+      display: grid;
+      grid-template-columns: ${isHorizontal ? '1fr 1fr' : '1fr'};
+    }
+    .capture-panel { padding: 20px; }
+    .capture-panel-a { border-${isHorizontal ? 'right' : 'bottom'}: 1px solid #e5e2db; }
+    .capture-label {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+    .label-a { background: #e8f0ea; color: #4a7c59; }
+    .label-b { background: #f0ebe8; color: #7c5a4a; }
+    .capture-text {
+      font-family: 'Ridibatang', serif;
+      font-size: 0.85rem;
+      line-height: 1.85;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .speaker-line {
+      display: block;
+      font-weight: 600;
+      margin-top: 1.2em;
+      padding-bottom: 0.3em;
+      border-bottom: 1px solid #eee;
+    }
+    .index-num {
+      color: #999;
+      font-size: 0.75em;
+      margin-right: 6px;
+    }
+    .timeinfo-box {
+      background: #f5f3ee;
+      border-left: 2px solid #e5e2db;
+      padding: 10px 14px;
+      margin: 12px 0;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.8rem;
+    }
+    .ti-row { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
+    .ti-icon { width: 14px; height: 14px; opacity: 0.6; flex-shrink: 0; margin-top: 2px; }
+    .ti-value { color: #666; }
+    mark.yellow { background: #fff3a8; }
+    mark.green { background: #b8f0b8; }
+    mark.blue { background: #a8d4ff; }
+    mark.pink { background: #ffb8d4; }
+    mark.purple { background: #d4b8ff; }
+  </style>
+</head>
+<body>
+  <div class="notice">
+    📱 아이폰: 스크린샷으로 저장하세요!<br>
+    <small>(전원 + 볼륨↑ 또는 전원 + 홈버튼)</small>
+  </div>
+  <div class="capture-content">
+    ${content}
+  </div>
+</body>
+</html>`;
+      
+      const newWindow = window.open('', '_blank');
+      if (newWindow) {
+        newWindow.document.write(html);
+        newWindow.document.close();
+        showToast('📱 새 창에서 스크린샷!');
+      } else {
+        showToast('팝업이 차단됨');
+      }
     }
 
     function setupDragDrop(zone, panel) {
@@ -2013,19 +2147,61 @@
 
       // Edit mode
       el.btnEdit.addEventListener('click', () => {
+        enterEditMode(false);
+      });
+
+      // New text mode (새 글 작성)
+      el.btnNew.addEventListener('click', () => {
+        enterEditMode(true);
+      });
+
+      function enterEditMode(isNewMode) {
         state.editMode = true;
+        state.newMode = isNewMode;
         el.editToolbar.classList.add('show');
-        el.btnEdit.classList.add('active');
+        
+        if (isNewMode) {
+          el.btnNew.classList.add('active');
+          el.editToolbarTitle.textContent = '📝 새 글 작성';
+          el.editToolbarHint.textContent = '— A 패널에 새 글을 작성하세요';
+          // A 패널 초기화 및 편집 가능하게
+          el.viewA.innerHTML = '<div class="new-text-placeholder" style="color:#999;font-style:italic;">여기에 글을 작성하세요...</div>';
+          el.viewA.classList.remove('hidden');
+          el.zoneA.classList.add('hidden');
+          el.filenameA.textContent = '새 문서';
+          setViewMode('single-a');
+        } else {
+          el.btnEdit.classList.add('active');
+          el.editToolbarTitle.textContent = '✏️ 편집 모드';
+          el.editToolbarHint.textContent = '— 텍스트를 직접 수정할 수 있어요';
+        }
+        
         el.viewA.contentEditable = true;
         el.viewB.contentEditable = true;
         el.viewA.classList.add('editable');
         el.viewB.classList.add('editable');
-        showToast('편집 모드 활성화');
-      });
+        
+        // 새 글 작성시 포커스 및 placeholder 제거
+        if (isNewMode) {
+          el.viewA.focus();
+          el.viewA.addEventListener('focus', function clearPlaceholder() {
+            const placeholder = el.viewA.querySelector('.new-text-placeholder');
+            if (placeholder) placeholder.remove();
+            el.viewA.removeEventListener('focus', clearPlaceholder);
+          }, { once: true });
+        }
+        
+        showToast(isNewMode ? '새 글 작성 모드' : '편집 모드 활성화');
+      }
 
       el.btnEditCancel.addEventListener('click', () => {
+        if (state.newMode) {
+          clearPanel('a');
+        }
         exitEditMode();
-        updateDisplay('both');
+        if (!state.newMode) {
+          updateDisplay('both');
+        }
         showToast('편집 취소됨');
       });
 
@@ -2035,8 +2211,10 @@
 
       function exitEditMode() {
         state.editMode = false;
+        state.newMode = false;
         el.editToolbar.classList.remove('show');
         el.btnEdit.classList.remove('active');
+        el.btnNew.classList.remove('active');
         el.viewA.contentEditable = false;
         el.viewB.contentEditable = false;
         el.viewA.classList.remove('editable');
