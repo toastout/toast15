@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <!-- v5.1 배우 대기실 - iOS 캡처 새 창 방식, 새 글 작성 기능 -->
+  <!-- v5.3 배우 대기실 - 텍스트 diff 비교 기능 -->
   <title>📜 배우 대기실</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   
@@ -123,6 +123,51 @@
     .btn-primary:hover { background: #4a5ab0; }
 
     .btn-sm { padding: 5px 10px; font-size: 0.75rem; }
+
+    /* Dropdown */
+    .dropdown {
+      position: relative;
+    }
+
+    .dropdown-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      margin-top: 4px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 200;
+      min-width: 140px;
+      overflow: hidden;
+    }
+
+    .dropdown-menu.show {
+      display: block;
+    }
+
+    .dropdown-item {
+      display: block;
+      width: 100%;
+      padding: 10px 14px;
+      border: none;
+      background: transparent;
+      text-align: left;
+      font-size: 0.8rem;
+      font-family: inherit;
+      cursor: pointer;
+      color: var(--text-primary);
+    }
+
+    .dropdown-item:hover {
+      background: var(--bg-input);
+    }
+
+    .dropdown-item:not(:last-child) {
+      border-bottom: 1px solid var(--border-light);
+    }
 
     /* Page control */
     .page-control {
@@ -681,6 +726,27 @@
 
     .btn-clear-hl:hover { border-color: #e74c3c; color: #e74c3c; }
 
+    /* Diff highlights */
+    .diff-added {
+      background: #d1fae5;
+      color: #065f46;
+      padding: 1px 2px;
+      border-radius: 2px;
+    }
+    .diff-removed {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 1px 2px;
+      border-radius: 2px;
+      text-decoration: line-through;
+    }
+    .diff-changed {
+      background: #fef3c7;
+      color: #92400e;
+      padding: 1px 2px;
+      border-radius: 2px;
+    }
+
     /* Toast & Sync */
     .toast {
       position: fixed;
@@ -967,8 +1033,15 @@
       <button class="btn" id="btn-meta">🏷️ 메타</button>
       <button class="btn" id="btn-rules">🔄 치환</button>
       <button class="btn" id="btn-copy">📋 복사</button>
-      <button class="btn" id="btn-new">📝 새 글</button>
+      <div class="dropdown">
+        <button class="btn" id="btn-new">📝 새 글 ▾</button>
+        <div class="dropdown-menu" id="new-menu">
+          <button class="dropdown-item" data-panel="a">A 패널에 작성</button>
+          <button class="dropdown-item" data-panel="b">B 패널에 작성</button>
+        </div>
+      </div>
       <button class="btn" id="btn-edit">✏️ 편집</button>
+      <button class="btn" id="btn-diff">🔍 차이</button>
       <button class="btn" id="btn-sync">🔗 동기화</button>
       <button class="btn btn-primary" id="btn-capture">📸 캡처</button>
     </div>
@@ -981,8 +1054,9 @@
       <span style="opacity:0.7;font-size:0.75rem;" id="edit-toolbar-hint">— 텍스트를 직접 수정할 수 있어요</span>
     </div>
     <div class="edit-toolbar-right">
+      <button class="btn-edit-action" id="btn-save">💾 저장</button>
       <button class="btn-edit-action" id="btn-edit-cancel">취소</button>
-      <button class="btn-edit-action primary" id="btn-export">💾 내보내기 (.txt)</button>
+      <button class="btn-edit-action primary" id="btn-export">📥 내보내기 (.txt)</button>
     </div>
   </div>
 
@@ -1202,6 +1276,8 @@
       },
       editMode: false,
       newMode: false,  // 새 글 작성 모드
+      activePanel: null,  // 현재 편집 중인 패널 ('a' or 'b')
+      diffMode: false,  // 차이 비교 모드
       fontSize: 2  // 0:작게, 1:조금작게, 2:중, 3:조금크게, 4:크게
     };
 
@@ -1277,12 +1353,15 @@
       editToolbar: document.getElementById('edit-toolbar'),
       btnEditCancel: document.getElementById('btn-edit-cancel'),
       btnExport: document.getElementById('btn-export'),
+      btnSave: document.getElementById('btn-save'),
       fontDecrease: document.getElementById('font-decrease'),
       fontIncrease: document.getElementById('font-increase'),
       fontSizeLabel: document.getElementById('font-size-label'),
       btnNew: document.getElementById('btn-new'),
+      newMenu: document.getElementById('new-menu'),
       editToolbarTitle: document.getElementById('edit-toolbar-title'),
-      editToolbarHint: document.getElementById('edit-toolbar-hint')
+      editToolbarHint: document.getElementById('edit-toolbar-hint'),
+      btnDiff: document.getElementById('btn-diff')
     };
 
     function showToast(msg) {
@@ -2147,61 +2226,128 @@
 
       // Edit mode
       el.btnEdit.addEventListener('click', () => {
-        enterEditMode(false);
+        enterEditMode(false, null);
       });
 
-      // New text mode (새 글 작성)
-      el.btnNew.addEventListener('click', () => {
-        enterEditMode(true);
+      // New text dropdown
+      el.btnNew.addEventListener('click', (e) => {
+        e.stopPropagation();
+        el.newMenu.classList.toggle('show');
       });
 
-      function enterEditMode(isNewMode) {
+      // 드롭다운 외부 클릭 시 닫기
+      document.addEventListener('click', (e) => {
+        if (!el.btnNew.contains(e.target) && !el.newMenu.contains(e.target)) {
+          el.newMenu.classList.remove('show');
+        }
+      });
+
+      // 드롭다운 아이템 클릭
+      el.newMenu.querySelectorAll('.dropdown-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const panel = item.dataset.panel;
+          el.newMenu.classList.remove('show');
+          enterEditMode(true, panel);
+        });
+      });
+
+      function enterEditMode(isNewMode, targetPanel) {
         state.editMode = true;
         state.newMode = isNewMode;
+        state.activePanel = targetPanel;
         el.editToolbar.classList.add('show');
         
-        if (isNewMode) {
+        if (isNewMode && targetPanel) {
           el.btnNew.classList.add('active');
+          const panelLabel = targetPanel.toUpperCase();
           el.editToolbarTitle.textContent = '📝 새 글 작성';
-          el.editToolbarHint.textContent = '— A 패널에 새 글을 작성하세요';
-          // A 패널 초기화 및 편집 가능하게
-          el.viewA.innerHTML = '<div class="new-text-placeholder" style="color:#999;font-style:italic;">여기에 글을 작성하세요...</div>';
-          el.viewA.classList.remove('hidden');
-          el.zoneA.classList.add('hidden');
-          el.filenameA.textContent = '새 문서';
-          setViewMode('single-a');
+          el.editToolbarHint.textContent = `— ${panelLabel} 패널에 글을 작성하세요`;
+          
+          const view = targetPanel === 'a' ? el.viewA : el.viewB;
+          const zone = targetPanel === 'a' ? el.zoneA : el.zoneB;
+          const filename = targetPanel === 'a' ? el.filenameA : el.filenameB;
+          
+          view.innerHTML = '';
+          view.classList.remove('hidden');
+          zone.classList.add('hidden');
+          filename.textContent = '새 문서';
+          
+          setViewMode(targetPanel === 'a' ? 'single-a' : 'single-b');
+          
+          view.contentEditable = true;
+          view.classList.add('editable');
+          view.focus();
         } else {
           el.btnEdit.classList.add('active');
           el.editToolbarTitle.textContent = '✏️ 편집 모드';
           el.editToolbarHint.textContent = '— 텍스트를 직접 수정할 수 있어요';
+          
+          el.viewA.contentEditable = true;
+          el.viewB.contentEditable = true;
+          el.viewA.classList.add('editable');
+          el.viewB.classList.add('editable');
         }
         
-        el.viewA.contentEditable = true;
-        el.viewB.contentEditable = true;
-        el.viewA.classList.add('editable');
-        el.viewB.classList.add('editable');
-        
-        // 새 글 작성시 포커스 및 placeholder 제거
-        if (isNewMode) {
-          el.viewA.focus();
-          el.viewA.addEventListener('focus', function clearPlaceholder() {
-            const placeholder = el.viewA.querySelector('.new-text-placeholder');
-            if (placeholder) placeholder.remove();
-            el.viewA.removeEventListener('focus', clearPlaceholder);
-          }, { once: true });
+        showToast(isNewMode ? `${targetPanel?.toUpperCase() || ''} 새 글 작성 모드` : '편집 모드 활성화');
+      }
+
+      // 저장 버튼 (상태 확정)
+      el.btnSave.addEventListener('click', () => {
+        saveCurrentState();
+      });
+
+      function saveCurrentState() {
+        const getPlainText = (view) => {
+          let text = '';
+          const walk = (node) => {
+            if (node.nodeType === Node.TEXT_NODE) {
+              text += node.textContent;
+            } else if (node.nodeName === 'BR') {
+              text += '\n';
+            } else if (node.classList?.contains('speaker-line')) {
+              const idx = node.querySelector('.index-num');
+              const name = node.textContent.replace(idx?.textContent || '', '').trim();
+              text += '\n--' + name + '\n';
+            } else if (node.classList?.contains('timeinfo-box')) {
+              // skip
+            } else if (node.childNodes) {
+              node.childNodes.forEach(walk);
+            }
+          };
+          view.childNodes.forEach(walk);
+          return text.trim();
+        };
+
+        if (state.newMode && state.activePanel) {
+          // 새 글 모드: 해당 패널만 저장
+          const view = state.activePanel === 'a' ? el.viewA : el.viewB;
+          const text = getPlainText(view);
+          
+          if (state.activePanel === 'a') {
+            state.originalTextA = text;
+            state.filenameA = '새 문서';
+          } else {
+            state.originalTextB = text;
+            state.filenameB = '새 문서';
+          }
+          
+          exitEditMode();
+          updateDisplay(state.activePanel);
+          setViewMode('dual');
+          showToast(`${state.activePanel.toUpperCase()} 저장 완료! 비교 모드로 전환`);
+        } else {
+          // 편집 모드: 양쪽 다 저장
+          state.originalTextA = getPlainText(el.viewA);
+          state.originalTextB = getPlainText(el.viewB);
+          exitEditMode();
+          updateDisplay('both');
+          showToast('저장 완료!');
         }
-        
-        showToast(isNewMode ? '새 글 작성 모드' : '편집 모드 활성화');
       }
 
       el.btnEditCancel.addEventListener('click', () => {
-        if (state.newMode) {
-          clearPanel('a');
-        }
         exitEditMode();
-        if (!state.newMode) {
-          updateDisplay('both');
-        }
+        updateDisplay('both');
         showToast('편집 취소됨');
       });
 
@@ -2212,6 +2358,7 @@
       function exitEditMode() {
         state.editMode = false;
         state.newMode = false;
+        state.activePanel = null;
         el.editToolbar.classList.remove('show');
         el.btnEdit.classList.remove('active');
         el.btnNew.classList.remove('active');
@@ -2280,6 +2427,134 @@
         
         showToast('저장 완료: ' + filename);
         exitEditMode();
+      }
+
+      // ========== Diff 비교 기능 ==========
+      el.btnDiff.addEventListener('click', () => {
+        if (state.diffMode) {
+          exitDiffMode();
+        } else {
+          enterDiffMode();
+        }
+      });
+
+      function enterDiffMode() {
+        const textA = el.viewA.textContent || '';
+        const textB = el.viewB.textContent || '';
+        
+        if (!textA.trim() || !textB.trim()) {
+          showToast('A와 B 모두 텍스트가 필요해요');
+          return;
+        }
+        
+        state.diffMode = true;
+        el.btnDiff.classList.add('active');
+        
+        // 줄 단위로 비교
+        const linesA = textA.split('\n');
+        const linesB = textB.split('\n');
+        
+        const diffA = [];
+        const diffB = [];
+        
+        const maxLines = Math.max(linesA.length, linesB.length);
+        
+        for (let i = 0; i < maxLines; i++) {
+          const lineA = linesA[i] || '';
+          const lineB = linesB[i] || '';
+          
+          if (lineA === lineB) {
+            diffA.push(escapeHtml(lineA));
+            diffB.push(escapeHtml(lineB));
+          } else {
+            // 단어 단위 비교
+            diffA.push(diffWords(lineA, lineB, 'a'));
+            diffB.push(diffWords(lineA, lineB, 'b'));
+          }
+        }
+        
+        el.viewA.innerHTML = diffA.join('<br>');
+        el.viewB.innerHTML = diffB.join('<br>');
+        
+        setViewMode('dual');
+        showToast('🔍 차이점 표시 중');
+      }
+
+      function diffWords(lineA, lineB, side) {
+        const wordsA = lineA.split(/(\s+)/);
+        const wordsB = lineB.split(/(\s+)/);
+        
+        // LCS (Longest Common Subsequence) 기반 diff
+        const lcs = computeLCS(wordsA, wordsB);
+        
+        if (side === 'a') {
+          return buildDiffHtml(wordsA, wordsB, lcs, 'removed');
+        } else {
+          return buildDiffHtml(wordsB, wordsA, lcs, 'added');
+        }
+      }
+
+      function computeLCS(arr1, arr2) {
+        const m = arr1.length;
+        const n = arr2.length;
+        const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+        
+        for (let i = 1; i <= m; i++) {
+          for (let j = 1; j <= n; j++) {
+            if (arr1[i - 1] === arr2[j - 1]) {
+              dp[i][j] = dp[i - 1][j - 1] + 1;
+            } else {
+              dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+            }
+          }
+        }
+        
+        // Backtrack to find LCS
+        const lcs = new Set();
+        let i = m, j = n;
+        while (i > 0 && j > 0) {
+          if (arr1[i - 1] === arr2[j - 1]) {
+            lcs.add(arr1[i - 1] + '_' + (i - 1));
+            i--; j--;
+          } else if (dp[i - 1][j] > dp[i][j - 1]) {
+            i--;
+          } else {
+            j--;
+          }
+        }
+        
+        return lcs;
+      }
+
+      function buildDiffHtml(words, otherWords, lcs, diffClass) {
+        let html = '';
+        const otherSet = new Set(otherWords.filter(w => w.trim()));
+        
+        words.forEach((word, idx) => {
+          const key = word + '_' + idx;
+          const escaped = escapeHtml(word);
+          
+          if (!word.trim()) {
+            html += escaped;
+          } else if (lcs.has(key)) {
+            html += escaped;
+          } else if (otherSet.has(word)) {
+            // 위치만 다른 경우 - 변경으로 표시
+            html += `<span class="diff-changed">${escaped}</span>`;
+          } else {
+            // 완전히 다른 경우
+            html += `<span class="diff-${diffClass}">${escaped}</span>`;
+          }
+        });
+        
+        return html;
+      }
+
+      function exitDiffMode() {
+        state.diffMode = false;
+        el.btnDiff.classList.remove('active');
+        updateDisplay('both');
+        showToast('비교 모드 종료');
       }
 
       updatePageInfo();
