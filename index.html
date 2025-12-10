@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <!-- v5.8 배우 대기실 - 캡처 여백 줄이기, 빠른 입력 전체 치환 적용 -->
+  <!-- v5.9 배우 대기실 - 치환 경유 기능 추가 -->
   <title>📜 배우 대기실</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   
@@ -308,6 +308,18 @@
       grid-template-columns: 1fr 1fr;
       gap: 14px;
       margin-bottom: 12px;
+    }
+
+    .rules-grid-3col {
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    .speaker-rules-hint {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      font-style: italic;
     }
 
     .rules-column {
@@ -1133,12 +1145,18 @@
     <!-- 화자 치환 (아래로) -->
     <div class="speaker-rules">
       <div class="extra-rules-title" style="margin-top:12px;">👤 화자 치환</div>
+      <div class="speaker-rules-hint">경유: 다른 치환에서 보호할 임시 이름 (선택)</div>
       
-      <div class="rules-grid">
+      <div class="rules-grid rules-grid-3col">
         <div class="rules-column">
           <div class="rules-column-title">원본</div>
           <div class="rule-pair"><input type="text" class="rule-input" id="name1" placeholder="화자명 1"></div>
           <div class="rule-pair"><input type="text" class="rule-input" id="name2" placeholder="화자명 2"></div>
+        </div>
+        <div class="rules-column">
+          <div class="rules-column-title">경유</div>
+          <div class="rule-pair"><input type="text" class="rule-input" id="via1" placeholder="(선택)"></div>
+          <div class="rule-pair"><input type="text" class="rule-input" id="via2" placeholder="(선택)"></div>
         </div>
         <div class="rules-column">
           <div class="rules-column-title">치환</div>
@@ -1370,6 +1388,8 @@
       rulesPanel: document.getElementById('rules-panel'),
       name1: document.getElementById('name1'),
       name2: document.getElementById('name2'),
+      via1: document.getElementById('via1'),
+      via2: document.getElementById('via2'),
       replace1: document.getElementById('replace1'),
       replace2: document.getElementById('replace2'),
       btnSwap: document.getElementById('btn-swap'),
@@ -1561,17 +1581,40 @@
 
     function applyRules(text) {
       let result = text;
-      // 추가 치환 먼저 적용 (김소넷 → 김{{user}} 등)
-      const rules = [
-        ...state.extraRules,
-        { from: el.name1.value, to: el.replace1.value },
-        { from: el.name2.value, to: el.replace2.value }
+      
+      // 1단계: 화자 치환 - 원본 → 경유 (경유가 있는 경우만)
+      const speakerRules = [
+        { from: el.name1.value, via: el.via1.value, to: el.replace1.value },
+        { from: el.name2.value, via: el.via2.value, to: el.replace2.value }
       ];
-      rules.forEach(r => {
+      
+      speakerRules.forEach(r => {
+        if (r.from && r.from.trim() && r.via && r.via.trim()) {
+          result = result.replace(new RegExp(escapeRegex(r.from), 'g'), r.via);
+        }
+      });
+      
+      // 2단계: 추가 치환 적용
+      state.extraRules.forEach(r => {
         if (r.from && r.from.trim()) {
           result = result.replace(new RegExp(escapeRegex(r.from), 'g'), r.to);
         }
       });
+      
+      // 3단계: 화자 치환 - 경유 → 최종 (경유가 있는 경우)
+      //        또는 원본 → 최종 (경유가 없는 경우)
+      speakerRules.forEach(r => {
+        if (r.from && r.from.trim()) {
+          if (r.via && r.via.trim()) {
+            // 경유 → 최종
+            result = result.replace(new RegExp(escapeRegex(r.via), 'g'), r.to);
+          } else {
+            // 원본 → 최종 (경유 없음)
+            result = result.replace(new RegExp(escapeRegex(r.from), 'g'), r.to);
+          }
+        }
+      });
+      
       return result;
     }
 
@@ -2132,7 +2175,7 @@
       });
       
       // 입력 필드 포커스 추적
-      [el.name1, el.name2, el.replace1, el.replace2].forEach(input => {
+      [el.name1, el.name2, el.via1, el.via2, el.replace1, el.replace2].forEach(input => {
         input.addEventListener('focus', () => {
           lastFocusedInput = input;
         });
@@ -2184,6 +2227,8 @@
       el.btnResetText.addEventListener('click', () => {
         el.name1.value = '';
         el.name2.value = '';
+        el.via1.value = '';
+        el.via2.value = '';
         el.replace1.value = '{{char}}';
         el.replace2.value = '{{user}}';
         state.extraRules = [];
