@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <!-- v5.3 배우 대기실 - 텍스트 diff 비교 기능 -->
+  <!-- v5.8 배우 대기실 - 캡처 여백 줄이기, 빠른 입력 전체 치환 적용 -->
   <title>📜 배우 대기실</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   
@@ -391,6 +391,54 @@
     }
 
     .btn-remove:hover { color: #e74c3c; }
+
+    /* Quick tags for speaker input */
+    .quick-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 10px;
+      padding: 8px;
+      background: var(--bg-input);
+      border-radius: 6px;
+    }
+
+    .quick-tags-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-right: 4px;
+    }
+
+    .quick-tag {
+      padding: 4px 10px;
+      font-size: 0.72rem;
+      font-family: inherit;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      color: var(--text-primary);
+    }
+
+    .quick-tag:hover {
+      background: var(--accent-ui);
+      color: white;
+      border-color: var(--accent-ui);
+    }
+
+    .quick-tag.detected {
+      background: #e8f5e9;
+      border-color: #a5d6a7;
+      color: #2e7d32;
+    }
+
+    .quick-tag.detected:hover {
+      background: #4caf50;
+      color: white;
+      border-color: #4caf50;
+    }
 
     .rules-actions {
       display: flex;
@@ -887,12 +935,15 @@
       overflow: auto;
       padding: 16px;
       background: #e0e0e0;
+      display: flex;
+      justify-content: center;
     }
 
     #capture-target {
       background: white;
       border-radius: 8px;
       overflow: hidden;
+      margin: 0 auto;  /* 가운데 정렬 */
     }
 
     .capture-grid {
@@ -900,21 +951,19 @@
     }
 
     .capture-grid.horizontal {
-      grid-template-columns: 1fr 1fr;
-      min-width: 700px;
+      grid-template-columns: 450px 450px;
+      width: 900px;
     }
 
     .capture-grid.vertical {
       grid-template-columns: 1fr;
-      min-width: 360px;
-      max-width: 480px;
+      width: 450px;
     }
 
     .capture-grid.single-a,
     .capture-grid.single-b {
       grid-template-columns: 1fr;
-      min-width: 360px;
-      max-width: 500px;
+      width: 450px;
     }
 
     .capture-grid.single-a .capture-panel-b,
@@ -923,7 +972,7 @@
     }
 
     .capture-panel {
-      padding: 18px;
+      padding: 14px;
     }
 
     .capture-grid.horizontal .capture-panel-a { border-right: 1px solid var(--border); }
@@ -954,6 +1003,7 @@
       line-height: 1.85;
       white-space: pre-wrap;
       word-break: break-word;
+      text-align: justify;  /* 양쪽 정렬 */
     }
 
     .capture-text .speaker-line {
@@ -980,8 +1030,7 @@
       main.single-view .panel.active { height: auto; flex: 1; }
       .rules-grid { grid-template-columns: 1fr; }
       .text-view { padding: 14px; font-size: 0.85rem; }
-      .capture-grid.horizontal { grid-template-columns: 1fr; min-width: auto; }
-      .capture-grid.horizontal .capture-panel-a { border-right: none; border-bottom: 1px solid var(--border); }
+      /* 캡처는 고정 너비 유지 - 스크롤 가능 */
     }
 
     /* iOS 파일 선택 호환성 - sr-only 패턴 */
@@ -1066,6 +1115,14 @@
       <button class="btn btn-sm btn-swap" id="btn-swap">↔️ user/char 스왑</button>
     </div>
     
+    <!-- 빠른 입력 버튼 (전체 치환에 적용) -->
+    <div class="quick-tags" id="quick-tags">
+      <span class="quick-tags-label">빠른 입력:</span>
+      <button class="quick-tag" data-value="{{char}}">{{char}}</button>
+      <button class="quick-tag" data-value="{{user}}">{{user}}</button>
+      <!-- 감지된 화자는 JS로 동적 추가 -->
+    </div>
+    
     <!-- 추가 치환 (위로 이동) -->
     <div class="extra-rules">
       <div class="extra-rules-title">📝 추가 치환 (먼저 적용됨)</div>
@@ -1076,6 +1133,7 @@
     <!-- 화자 치환 (아래로) -->
     <div class="speaker-rules">
       <div class="extra-rules-title" style="margin-top:12px;">👤 화자 치환</div>
+      
       <div class="rules-grid">
         <div class="rules-column">
           <div class="rules-column-title">원본</div>
@@ -1278,6 +1336,7 @@
       newMode: false,  // 새 글 작성 모드
       activePanel: null,  // 현재 편집 중인 패널 ('a' or 'b')
       diffMode: false,  // 차이 비교 모드
+      detectedSpeakers: [],  // 감지된 화자명 목록
       fontSize: 2  // 0:작게, 1:조금작게, 2:중, 3:조금크게, 4:크게
     };
 
@@ -1316,6 +1375,7 @@
       btnSwap: document.getElementById('btn-swap'),
       btnAddRule: document.getElementById('btn-add-rule'),
       extraRulesList: document.getElementById('extra-rules-list'),
+      quickTags: document.getElementById('quick-tags'),
       btnApplyRules: document.getElementById('btn-apply-rules'),
       btnResetText: document.getElementById('btn-reset-text'),
       btnCapture: document.getElementById('btn-capture'),
@@ -1527,9 +1587,11 @@
 
       el.extraRulesList.querySelectorAll('.extra-from').forEach(inp => {
         inp.addEventListener('input', e => state.extraRules[e.target.dataset.i].from = e.target.value);
+        inp.addEventListener('focus', () => { lastFocusedInput = inp; });
       });
       el.extraRulesList.querySelectorAll('.extra-to').forEach(inp => {
         inp.addEventListener('input', e => state.extraRules[e.target.dataset.i].to = e.target.value);
+        inp.addEventListener('focus', () => { lastFocusedInput = inp; });
       });
       el.extraRulesList.querySelectorAll('.btn-remove').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -1628,19 +1690,43 @@
           el.clearB.style.display = 'block';
           updateDisplay('b');
         }
-        autoDetectSpeakers(text);
+        // 화자 감지해서 버튼 생성 (자동 입력은 안 함)
+        detectSpeakersForButtons(text);
       };
       reader.readAsText(file);
     }
 
-    function autoDetectSpeakers(text) {
+    // 화자명을 감지해서 빠른 입력 버튼 생성
+    function detectSpeakersForButtons(text) {
       const matches = text.match(/^--([^\n]+)$/gm);
       if (matches) {
         const names = [...new Set(matches.map(m => m.replace('--', '').trim()))];
-        if (names[0] && !el.name1.value) el.name1.value = names[0];
-        if (names[1] && !el.name2.value) el.name2.value = names[1];
+        names.forEach(name => {
+          if (name && !state.detectedSpeakers.includes(name)) {
+            state.detectedSpeakers.push(name);
+          }
+        });
+        updateQuickTags();
       }
     }
+
+    // 빠른 입력 버튼 업데이트
+    function updateQuickTags() {
+      // 기존 감지된 화자 버튼 제거
+      el.quickTags.querySelectorAll('.quick-tag.detected').forEach(btn => btn.remove());
+      
+      // 새로 추가
+      state.detectedSpeakers.forEach(name => {
+        const btn = document.createElement('button');
+        btn.className = 'quick-tag detected';
+        btn.dataset.value = name;
+        btn.textContent = name;
+        el.quickTags.appendChild(btn);
+      });
+    }
+
+    // 현재 포커스된 입력 필드 추적
+    let lastFocusedInput = null;
 
     function clearPanel(panel) {
       if (panel === 'a') {
@@ -1771,35 +1857,97 @@
     }
 
     async function downloadCapture() {
-      // iOS: 새 창으로 열기 (스크린샷 유도)
-      if (isIOS()) {
-        openCaptureInNewWindow();
-        return;
+      el.btnDownload.textContent = '생성 중...';
+      
+      const captureTarget = document.getElementById('capture-target');
+      const captureBody = document.querySelector('.capture-body');
+      
+      // 캡처 전: overflow 임시 해제하여 전체 내용 표시
+      const originalBodyOverflow = captureBody.style.overflow;
+      const originalBodyMaxHeight = captureBody.style.maxHeight;
+      const originalTargetOverflow = captureTarget.style.overflow;
+      
+      captureBody.style.overflow = 'visible';
+      captureBody.style.maxHeight = 'none';
+      captureTarget.style.overflow = 'visible';
+      
+      try {
+	  // CSS(.capture-grid)와 동일한 너비로 변경
+		const targetWidth = state.captureMode === 'horizontal' ? 900 : 450;
+        const targetHeight = captureTarget.scrollHeight;
+        
+        const canvas = await html2canvas(captureTarget, {
+          backgroundColor: '#fff',
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          width: targetWidth,
+          height: targetHeight,
+          windowWidth: targetWidth,
+          scrollX: 0,
+          scrollY: 0
+        });
+        
+        // iOS: 이미지를 새 창에서 보여주기 (길게 눌러 저장)
+        if (isIOS()) {
+          const dataUrl = canvas.toDataURL('image/png');
+          const newWindow = window.open('', '_blank');
+          if (newWindow) {
+            newWindow.document.write(`
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <title>📸 이미지 저장</title>
+                <style>
+                  body { margin: 0; padding: 20px; background: #f8f6f1; text-align: center; font-family: -apple-system, sans-serif; }
+                  .notice { background: #5c6bc0; color: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; font-size: 14px; }
+                  img { max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+                </style>
+              </head>
+              <body>
+                <div class="notice">📱 이미지를 길게 눌러 저장하세요!</div>
+                <img src="${dataUrl}" alt="캡처 이미지">
+              </body>
+              </html>
+            `);
+            newWindow.document.close();
+            showToast('📱 이미지 길게 눌러 저장!');
+          } else {
+            showToast('팝업이 차단됨');
+          }
+        } else {
+          // PC/Android: 바로 다운로드
+          const link = document.createElement('a');
+          link.download = `비교_${new Date().toISOString().slice(0,10)}.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+          showToast('저장 완료');
+        }
+      } catch (e) {
+        console.error('캡처 실패:', e);
+        // 실패 시 fallback: 새 창으로 열기
+        if (isIOS()) {
+          openCaptureInNewWindow();
+        } else {
+          showToast('캡처 실패');
+        }
+      } finally {
+        // 캡처 후: 원래 스타일 복원
+        captureBody.style.overflow = originalBodyOverflow;
+        captureBody.style.maxHeight = originalBodyMaxHeight;
+        captureTarget.style.overflow = originalTargetOverflow;
       }
       
-      // 데스크톱/안드로이드: html2canvas 사용
-      el.btnDownload.textContent = '생성 중...';
-      try {
-        const canvas = await html2canvas(document.getElementById('capture-target'), {
-          backgroundColor: '#fff',
-          scale: 2
-        });
-        const link = document.createElement('a');
-        link.download = `비교_${new Date().toISOString().slice(0,10)}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-        showToast('저장 완료');
-      } catch (e) {
-        showToast('캡처 실패');
-      }
       el.btnDownload.textContent = '💾 저장';
     }
 
-    // iOS용 새 창 캡처
+    // iOS용 새 창 캡처 (fallback)
     function openCaptureInNewWindow() {
       const captureTarget = document.getElementById('capture-target');
       const content = captureTarget.innerHTML;
       const isHorizontal = state.captureMode === 'horizontal';
+      const width = isHorizontal ? 1000 : 500;
       
       const html = `
 <!DOCTYPE html>
@@ -1836,12 +1984,13 @@
       border-radius: 12px;
       overflow: hidden;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      width: ${width}px;
     }
     .capture-grid {
       display: grid;
-      grid-template-columns: ${isHorizontal ? '1fr 1fr' : '1fr'};
+      grid-template-columns: ${isHorizontal ? '450px 450px' : '1fr'};
     }
-    .capture-panel { padding: 20px; }
+    .capture-panel { padding: 14px; }
     .capture-panel-a { border-${isHorizontal ? 'right' : 'bottom'}: 1px solid #e5e2db; }
     .capture-label {
       display: inline-block;
@@ -1859,6 +2008,7 @@
       line-height: 1.85;
       white-space: pre-wrap;
       word-break: break-word;
+      text-align: justify;
     }
     .speaker-line {
       display: block;
@@ -1980,6 +2130,44 @@
         el.rulesPanel.classList.toggle('open');
         el.metaPanel.classList.remove('open');
       });
+      
+      // 입력 필드 포커스 추적
+      [el.name1, el.name2, el.replace1, el.replace2].forEach(input => {
+        input.addEventListener('focus', () => {
+          lastFocusedInput = input;
+        });
+      });
+      
+      // Quick tag 버튼 클릭
+      el.quickTags.addEventListener('click', (e) => {
+        const btn = e.target.closest('.quick-tag');
+        if (!btn) return;
+        
+        const value = btn.dataset.value;
+        if (lastFocusedInput) {
+          lastFocusedInput.value = value;
+          lastFocusedInput.focus();
+          showToast(`"${value}" 입력됨`);
+        } else {
+          // 포커스된 입력 필드가 없으면 비어있는 첫 번째 필드에 입력
+          if (!el.name1.value) {
+            el.name1.value = value;
+            showToast(`원본1에 "${value}" 입력됨`);
+          } else if (!el.name2.value) {
+            el.name2.value = value;
+            showToast(`원본2에 "${value}" 입력됨`);
+          } else if (!el.replace1.value) {
+            el.replace1.value = value;
+            showToast(`치환1에 "${value}" 입력됨`);
+          } else if (!el.replace2.value) {
+            el.replace2.value = value;
+            showToast(`치환2에 "${value}" 입력됨`);
+          } else {
+            showToast('입력 필드를 먼저 클릭하세요');
+          }
+        }
+      });
+      
       el.btnSwap.addEventListener('click', () => {
         [el.replace1.value, el.replace2.value] = [el.replace2.value, el.replace1.value];
         showToast('스왑 완료');
