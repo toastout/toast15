@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <!-- v5.9 배우 대기실 - 치환 경유 기능 추가 -->
+  <!-- v6.0 배우 대기실 - 메타 수정 -->
   <title>📜 배우 대기실</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   
@@ -1188,28 +1188,18 @@
         </select>
       </label>
       <label class="meta-option">
-        <input type="checkbox" id="opt-approved">
-        <span class="meta-label">✅ ## Approved / ## Response</span>
+        <input type="checkbox" id="opt-system" checked>
+        <span class="meta-label"> 시스템(✅) & 구분선(🗿◌)</span>
         <span class="meta-hint">숨기기</span>
-      </label>
+      </label> 
       <label class="meta-option">
         <input type="checkbox" id="opt-checkmarks">
-        <span class="meta-label">✔✔ 체크마크</span>
-        <span class="meta-hint">숨기기</span>
-      </label>
-      <label class="meta-option">
-        <input type="checkbox" id="opt-moai">
-        <span class="meta-label">🗿 구분선 (이모지)</span>
-        <span class="meta-hint">숨기기</span>
-      </label>
-      <label class="meta-option">
-        <input type="checkbox" id="opt-circles">
-        <span class="meta-label">◌◌ 구분선 (원형)</span>
+        <span class="meta-label">이미지(✔) & {{inlay::...}}</span>
         <span class="meta-hint">숨기기</span>
       </label>
       <label class="meta-option">
         <input type="checkbox" id="opt-tags">
-        <span class="meta-label">&lt;태그&gt; HTML 태그</span>
+        <span class="meta-label">&lt;태그&gt; (HTML)</span>
         <span class="meta-hint">숨기기</span>
       </label>
     </div>
@@ -1339,11 +1329,10 @@
       speakerCountB: 0,
       metaOptions: {
         timeinfo: 'pretty',
-        hideApproved: true,
-        hideCheckmarks: true,
-        hideMoai: true,
-        hideCircles: true,
-        hideTags: true
+        hideSystem: true,     // [추가] 통합된 옵션
+        hideCheckmarks: true, // [유지] 체크마크는 따로 둠
+        hideTags: true        // [유지] 태그도 따로 둠
+        /* hideApproved, hideMoai, hideCircles는 삭제 */
       },
       pagination: {
         pageSize: 0,
@@ -1416,10 +1405,7 @@
       metaPanel: document.getElementById('meta-panel'),
       optTimeinfo: document.getElementById('opt-timeinfo'),
       optTimeinfoStyle: document.getElementById('opt-timeinfo-style'),
-      optApproved: document.getElementById('opt-approved'),
       optCheckmarks: document.getElementById('opt-checkmarks'),
-      optMoai: document.getElementById('opt-moai'),
-      optCircles: document.getElementById('opt-circles'),
       optTags: document.getElementById('opt-tags'),
       btnMetaApply: document.getElementById('btn-meta-apply'),
       btnMetaReset: document.getElementById('btn-meta-reset'),
@@ -1463,26 +1449,22 @@
       let result = text;
       const opts = state.metaOptions;
 
-      // ## Approved / ## Response
-      if (opts.hideApproved) {
-        result = result.replace(/^## Approved\s*$/gm, '');
-        result = result.replace(/^## Response\s*$/gm, '');
-      }
+       // [수정] 통합된 시스템 메시지 & 구분선 처리
+       if (opts.hideSystem) {
+       	// 1. Approved / Response 제거
+       	result = result.replace(/^## Approved\s*$/gm, '');
+       	result = result.replace(/^## Response\s*$/gm, '');
+       	// 2. 🗿 Moai 제거
+       	result = result.replace(/^!?[🗿]+!?\s*$/gm, '');
+       	// 3. ◌◌ Circles 제거
+       	result = result.replace(/^◌+\s*$/gm, '');
+       }
 
-      // ✔✔ checkmarks
-      if (opts.hideCheckmarks) {
-        result = result.replace(/✔✔\s*/g, '');
-      }
-
-      // 🗿 moai lines
-      if (opts.hideMoai) {
-        result = result.replace(/^!?[🗿]+!?\s*$/gm, '');
-      }
-
-      // ◌◌ circles
-      if (opts.hideCircles) {
-        result = result.replace(/^◌+\s*$/gm, '');
-      }
+       // ✔✔ checkmarks (아까 inlay 추가한 부분 유지)
+       if (opts.hideCheckmarks) {
+       	result = result.replace(/✔✔\s*/g, '');
+       	result = result.replace(/\{\{inlay::.*?\}\}\s*/g, '');
+       }
 
       // <tags>
       if (opts.hideTags) {
@@ -2374,42 +2356,37 @@
         }
       });
 
+      // [수정] 적용 버튼
       el.btnMetaApply.addEventListener('click', () => {
         state.metaOptions.timeinfo = el.optTimeinfoStyle.value;
-        state.metaOptions.hideApproved = el.optApproved.checked;
+        // 통합된 옵션 연결
+        state.metaOptions.hideSystem = document.getElementById('opt-system').checked;
         state.metaOptions.hideCheckmarks = el.optCheckmarks.checked;
-        state.metaOptions.hideMoai = el.optMoai.checked;
-        state.metaOptions.hideCircles = el.optCircles.checked;
         state.metaOptions.hideTags = el.optTags.checked;
         updateDisplay('both');
         el.metaPanel.classList.remove('open');
         showToast('메타 옵션 적용됨');
       });
 
+      // [수정] 초기화 버튼
       el.btnMetaReset.addEventListener('click', () => {
         el.optTimeinfoStyle.value = 'pretty';
-        el.optApproved.checked = true;
+        document.getElementById('opt-system').checked = true; // 통합 옵션 체크
         el.optCheckmarks.checked = true;
-        el.optMoai.checked = true;
-        el.optCircles.checked = true;
         el.optTags.checked = true;
         state.metaOptions = {
           timeinfo: 'pretty',
-          hideApproved: true,
+          hideSystem: true,    // 통합 옵션 true
           hideCheckmarks: true,
-          hideMoai: true,
-          hideCircles: true,
           hideTags: true
         };
         updateDisplay('both');
         showToast('기본값 복원');
       });
 
-      // Initialize meta checkboxes
-      el.optApproved.checked = state.metaOptions.hideApproved;
+      // [수정] 초기 로딩 시 체크박스 상태 반영
+      document.getElementById('opt-system').checked = state.metaOptions.hideSystem;
       el.optCheckmarks.checked = state.metaOptions.hideCheckmarks;
-      el.optMoai.checked = state.metaOptions.hideMoai;
-      el.optCircles.checked = state.metaOptions.hideCircles;
       el.optTags.checked = state.metaOptions.hideTags;
       el.optTimeinfoStyle.value = state.metaOptions.timeinfo;
 
