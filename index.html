@@ -2,7 +2,7 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <!-- v6.3 배우 대기실 - 카톡 스타일 메시지(테마), 전체 초기화, 캡처 스크롤, 하이라이트 수정 -->
+    <!-- v6.4 배우 대기실 - HTML 코드 및 공백 수정 -->
     <title>📜 배우 대기실</title>
     <meta
       name="viewport"
@@ -1832,45 +1832,61 @@
         let result = text;
         const opts = state.metaOptions;
 
-        // [수정] 통합된 시스템 메시지 & 구분선 처리
+        // 1. [옵션] 시스템 메시지 & 구분선 처리
         if (opts.hideSystem) {
-          // 1. Approved / Response 제거
           result = result.replace(/^## Approved\s*$/gm, "");
           result = result.replace(/^## Response\s*$/gm, "");
-          // 2. 🗿 Moai 제거
           result = result.replace(/^!?[🗿]+!?\s*$/gm, "");
-          // 3. ◌◌ Circles 제거
           result = result.replace(/^◌+\s*$/gm, "");
         }
 
-        // ✔✔ checkmarks (아까 inlay 추가한 부분 유지)
+        // 2. [옵션] 체크마크 & 인레이 코드 제거
         if (opts.hideCheckmarks) {
           result = result.replace(/✔✔\s*/g, "");
           result = result.replace(/\{\{inlay::.*?\}\}\s*/g, "");
         }
 
-        // <tags>
+        // 3. [옵션] <태그> 숨기기 (기능 강화: 마크다운 제거 + HTML 변환 + 공백 압축)
         if (opts.hideTags) {
-          result = result.replace(/<[^>]+>\s*/g, "");
+          // (0) [NEW] 마크다운 코드 블록 기호(```html, ```css, ```) 제거
+          //     가장 먼저 껍질을 벗겨냅니다.
+          result = result.replace(/```\w*\s*/g, "");
+
+          // (1) <style>, <script> 내부 코드는 내용까지 통째로 삭제
+          result = result.replace(/<(style|script)[^>]*>[\s\S]*?<\/\1>/gi, "");
+
+          // (2) 블록 태그(div, p, br 등)를 개행문자(\n)로 변환하여 문단 구분 유지
+          result = result.replace(
+            /<\/?(div|p|br|h[1-6]|li|tr|table)[^>]*>/gi,
+            "\n"
+          );
+
+          // (3) 나머지 모든 HTML 태그 껍데기 삭제
+          result = result.replace(/<[^>]+>/g, "");
+
+          // (4) HTML 특수문자 공백(&nbsp;)을 일반 공백으로 변환
+          result = result.replace(/&nbsp;/gi, " ");
+
+          // (5) 각 줄의 앞뒤 공백(들여쓰기) 제거 (Trim)
+          result = result.replace(/^[ \t]+/gm, "");
+          result = result.replace(/[ \t]+$/gm, "");
+
+          // (6) 과도한 줄바꿈 압축 (3줄 이상 빈 줄 -> 2줄로)
+          result = result.replace(/\n{3,}/g, "\n\n");
         }
 
-        // TimeInfo handling - ## TimeInfo는 항상 제거, [Time:...] 대괄호만 처리
+        // 4. [옵션] TimeInfo 처리
         if (opts.timeinfo === "hide") {
-          // ## TimeInfo 제거
           result = result.replace(/^## TimeInfo\s*$/gm, "");
-          // [Time:...] 대괄호도 제거
           result = result.replace(/^\[Time:.*?\]\s*$/gm, "");
         } else if (opts.timeinfo === "pretty") {
-          // ## TimeInfo 텍스트는 제거
           result = result.replace(/^## TimeInfo\s*$/gm, "");
-          // [Time:...] 대괄호만 예쁘게 변환
           result = result.replace(/^\[(Time:.*?)\]\s*$/gm, (match, content) => {
             return `[[TIMEINFO_PRETTY:${content}]]`;
           });
         }
-        // 'raw' keeps as is
 
-        // Clean up multiple empty lines
+        // 5. 최종 마무리: 전체 텍스트의 과도한 공백 정리
         result = result.replace(/\n{4,}/g, "\n\n\n");
 
         return result;
