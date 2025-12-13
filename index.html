@@ -2,7 +2,7 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <!-- v6.4 배우 대기실 - HTML 코드 및 공백 수정 -->
+    <!-- v6.6 배우 대기실 - 새 글 쓰기 모달 방식으로 변경 -->
     <title>📜 배우 대기실</title>
     <meta
       name="viewport"
@@ -1063,6 +1063,126 @@
         opacity: 0.9;
       }
 
+      /* 새 글 쓰기 모달 */
+      .newtext-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.85);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        padding: 16px;
+      }
+
+      .newtext-modal.open {
+        display: flex;
+      }
+
+      .newtext-box {
+        background: white;
+        border-radius: 12px;
+        width: 90vw;
+        max-width: 800px;
+        height: 80vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+        position: relative;
+      }
+
+      .newtext-header {
+        padding: 14px 18px;
+        background: var(--bg-input);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-radius: 12px 12px 0 0;
+      }
+
+      .newtext-title {
+        font-weight: 600;
+        font-size: 0.95rem;
+      }
+
+      .newtext-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .newtext-body {
+        flex: 1;
+        padding: 0;
+        overflow: hidden;
+      }
+
+      #newtext-editor {
+        width: 100%;
+        height: 100%;
+        border: none;
+        padding: 18px;
+        font-family: 'Ridibatang', serif;
+        font-size: 0.95rem;
+        line-height: 1.9;
+        resize: none;
+        outline: none;
+        background: #fffef8;
+      }
+
+      #newtext-editor::placeholder {
+        color: var(--text-muted);
+      }
+
+      .newtext-footer {
+        padding: 10px 18px;
+        background: var(--bg-input);
+        border-top: 1px solid var(--border);
+        border-radius: 0 0 12px 12px;
+      }
+
+      .newtext-hint {
+        font-size: 0.72rem;
+        color: var(--text-muted);
+      }
+
+      .newtext-save-menu {
+        position: absolute;
+        top: 52px;
+        right: 18px;
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        display: none;
+        flex-direction: column;
+        overflow: hidden;
+        z-index: 10;
+      }
+
+      .newtext-save-menu.show {
+        display: flex;
+      }
+
+      .newtext-save-option {
+        padding: 10px 16px;
+        border: none;
+        background: white;
+        text-align: left;
+        font-family: inherit;
+        font-size: 0.82rem;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+
+      .newtext-save-option:hover {
+        background: var(--bg-input);
+      }
+
+      .newtext-save-option:not(:last-child) {
+        border-bottom: 1px solid var(--border-light);
+      }
+
       /* Capture Modal */
       .capture-modal {
         position: fixed;
@@ -1386,11 +1506,7 @@
         <button class="btn" id="btn-rules">🔄 치환</button>
         <button class="btn" id="btn-copy">📋 복사</button>
         <div class="dropdown">
-          <button class="btn" id="btn-new">📝 새 글 ▾</button>
-          <div class="dropdown-menu" id="new-menu">
-            <button class="dropdown-item" data-panel="a">A 패널에 작성</button>
-            <button class="dropdown-item" data-panel="b">B 패널에 작성</button>
-          </div>
+          <button class="btn" id="btn-new">📝 새 글</button>
         </div>
         <button class="btn" id="btn-edit">✏️ 편집</button>
         <button class="btn" id="btn-diff">🔍 차이</button>
@@ -1684,6 +1800,31 @@
       </div>
     </div>
 
+    <!-- 새 글 쓰기 모달 -->
+    <div class="newtext-modal" id="newtext-modal">
+      <div class="newtext-box">
+        <div class="newtext-header">
+          <span class="newtext-title">📝 새 글 작성</span>
+          <div class="newtext-actions">
+            <button class="btn btn-sm" id="btn-newtext-cancel">취소</button>
+            <button class="btn btn-sm btn-primary" id="btn-newtext-save">저장 ▾</button>
+          </div>
+        </div>
+        <div class="newtext-body">
+          <textarea id="newtext-editor" placeholder="여기에 글을 작성하세요..."></textarea>
+        </div>
+        <div class="newtext-footer">
+          <span class="newtext-hint">💡 Ctrl+Enter로 저장 메뉴 열기</span>
+        </div>
+        <!-- 저장 위치 선택 드롭다운 -->
+        <div class="newtext-save-menu" id="newtext-save-menu">
+          <button class="newtext-save-option" data-target="a">A 패널에 저장</button>
+          <button class="newtext-save-option" data-target="b">B 패널에 저장</button>
+          <button class="newtext-save-option" data-target="export">📥 파일로 내보내기</button>
+        </div>
+      </div>
+    </div>
+
     <script>
       const state = {
         viewMode: "dual",
@@ -1803,7 +1944,11 @@
         fontIncrease: document.getElementById("font-increase"),
         fontSizeLabel: document.getElementById("font-size-label"),
         btnNew: document.getElementById("btn-new"),
-        newMenu: document.getElementById("new-menu"),
+        newtextModal: document.getElementById("newtext-modal"),
+        newtextEditor: document.getElementById("newtext-editor"),
+        btnNewtextCancel: document.getElementById("btn-newtext-cancel"),
+        btnNewtextSave: document.getElementById("btn-newtext-save"),
+        newtextSaveMenu: document.getElementById("newtext-save-menu"),
         editToolbarTitle: document.getElementById("edit-toolbar-title"),
         editToolbarHint: document.getElementById("edit-toolbar-hint"),
         btnDiff: document.getElementById("btn-diff"),
@@ -3072,70 +3217,126 @@
           enterEditMode(false, null);
         });
 
-        // New text dropdown
-        el.btnNew.addEventListener("click", (e) => {
-          e.stopPropagation();
-          el.newMenu.classList.toggle("show");
+        // 새 글 쓰기 모달
+        el.btnNew.addEventListener("click", () => {
+          el.newtextModal.classList.add("open");
+          el.newtextEditor.value = "";
+          el.newtextEditor.focus();
         });
 
-        // 드롭다운 외부 클릭 시 닫기
+        el.btnNewtextCancel.addEventListener("click", () => {
+          if (el.newtextEditor.value.trim() && !confirm("작성 중인 내용이 있습니다. 취소할까요?")) {
+            return;
+          }
+          el.newtextModal.classList.remove("open");
+          el.newtextSaveMenu.classList.remove("show");
+        });
+
+        el.btnNewtextSave.addEventListener("click", (e) => {
+          e.stopPropagation();
+          el.newtextSaveMenu.classList.toggle("show");
+        });
+
+        // 저장 메뉴 외부 클릭 시 닫기
         document.addEventListener("click", (e) => {
-          if (!el.btnNew.contains(e.target) && !el.newMenu.contains(e.target)) {
-            el.newMenu.classList.remove("show");
+          if (!el.btnNewtextSave.contains(e.target) && !el.newtextSaveMenu.contains(e.target)) {
+            el.newtextSaveMenu.classList.remove("show");
           }
         });
 
-        // 드롭다운 아이템 클릭
-        el.newMenu.querySelectorAll(".dropdown-item").forEach((item) => {
-          item.addEventListener("click", () => {
-            const panel = item.dataset.panel;
-            el.newMenu.classList.remove("show");
-            enterEditMode(true, panel);
+        // 저장 옵션 클릭
+        el.newtextSaveMenu.querySelectorAll(".newtext-save-option").forEach((opt) => {
+          opt.addEventListener("click", () => {
+            const target = opt.dataset.target;
+            const text = el.newtextEditor.value.trim();
+            
+            if (!text) {
+              showToast("내보낼 텍스트가 없어요");
+              return;
+            }
+
+            el.newtextSaveMenu.classList.remove("show");
+
+            if (target === "export") {
+              // 파일로 내보내기
+              const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `새글_${new Date().toISOString().slice(0, 10)}.txt`;
+              a.click();
+              URL.revokeObjectURL(url);
+              showToast("파일로 내보내기 완료!");
+            } else {
+              // A 또는 B 패널에 저장
+              if (target === "a") {
+                state.originalTextA = text;
+                state.filenameA = "새 문서";
+                el.filenameA.textContent = "새 문서";
+                el.viewA.classList.remove("hidden");
+                el.zoneA.classList.add("hidden");
+                el.clearA.style.display = "block";
+              } else {
+                state.originalTextB = text;
+                state.filenameB = "새 문서";
+                el.filenameB.textContent = "새 문서";
+                el.viewB.classList.remove("hidden");
+                el.zoneB.classList.add("hidden");
+                el.clearB.style.display = "block";
+              }
+              updateDisplay(target);
+              showToast(`${target.toUpperCase()} 패널에 저장 완료!`);
+            }
+
+            el.newtextModal.classList.remove("open");
           });
         });
 
+        // Ctrl+Enter로 저장 메뉴 열기
+        el.newtextEditor.addEventListener("keydown", (e) => {
+          if (e.ctrlKey && e.key === "Enter") {
+            e.preventDefault();
+            el.newtextSaveMenu.classList.toggle("show");
+          }
+        });
+
+        // 모달 배경 클릭 시 닫기
+        el.newtextModal.addEventListener("click", (e) => {
+          if (e.target === el.newtextModal) {
+            if (el.newtextEditor.value.trim() && !confirm("작성 중인 내용이 있습니다. 취소할까요?")) {
+              return;
+            }
+            el.newtextModal.classList.remove("open");
+            el.newtextSaveMenu.classList.remove("show");
+          }
+        });
+
+        // 붙여넣기 시 plain text만 받도록 처리 (전역 핸들러)
+        function handlePaste(e) {
+          e.preventDefault();
+          const text = e.clipboardData.getData('text/plain');
+          document.execCommand('insertText', false, text);
+        }
+
+        // 편집 모드 (기존 텍스트 수정용)
         function enterEditMode(isNewMode, targetPanel) {
           state.editMode = true;
           state.newMode = isNewMode;
           state.activePanel = targetPanel;
           el.editToolbar.classList.add("show");
 
-          if (isNewMode && targetPanel) {
-            el.btnNew.classList.add("active");
-            const panelLabel = targetPanel.toUpperCase();
-            el.editToolbarTitle.textContent = "📝 새 글 작성";
-            el.editToolbarHint.textContent = `— ${panelLabel} 패널에 글을 작성하세요`;
+          el.btnEdit.classList.add("active");
+          el.editToolbarTitle.textContent = "✏️ 편집 모드";
+          el.editToolbarHint.textContent = "— 텍스트를 직접 수정할 수 있어요";
 
-            const view = targetPanel === "a" ? el.viewA : el.viewB;
-            const zone = targetPanel === "a" ? el.zoneA : el.zoneB;
-            const filename = targetPanel === "a" ? el.filenameA : el.filenameB;
+          el.viewA.contentEditable = true;
+          el.viewB.contentEditable = true;
+          el.viewA.classList.add("editable");
+          el.viewB.classList.add("editable");
+          el.viewA.addEventListener('paste', handlePaste);
+          el.viewB.addEventListener('paste', handlePaste);
 
-            view.innerHTML = "";
-            view.classList.remove("hidden");
-            zone.classList.add("hidden");
-            filename.textContent = "새 문서";
-
-            setViewMode(targetPanel === "a" ? "single-a" : "single-b");
-
-            view.contentEditable = true;
-            view.classList.add("editable");
-            view.focus();
-          } else {
-            el.btnEdit.classList.add("active");
-            el.editToolbarTitle.textContent = "✏️ 편집 모드";
-            el.editToolbarHint.textContent = "— 텍스트를 직접 수정할 수 있어요";
-
-            el.viewA.contentEditable = true;
-            el.viewB.contentEditable = true;
-            el.viewA.classList.add("editable");
-            el.viewB.classList.add("editable");
-          }
-
-          showToast(
-            isNewMode
-              ? `${targetPanel?.toUpperCase() || ""} 새 글 작성 모드`
-              : "편집 모드 활성화"
-          );
+          showToast("편집 모드 활성화");
         }
 
         // 저장 버튼 (상태 확정)
@@ -3151,6 +3352,11 @@
                 text += node.textContent;
               } else if (node.nodeName === "BR") {
                 text += "\n";
+              } else if (node.nodeName === "DIV" || node.nodeName === "P") {
+                // div, p 태그는 줄바꿈 후 내용 처리
+                if (text && !text.endsWith("\n")) text += "\n";
+                node.childNodes.forEach(walk);
+                if (!text.endsWith("\n")) text += "\n";
               } else if (node.classList?.contains("speaker-line")) {
                 const idx = node.querySelector(".index-num");
                 const name = node.textContent
@@ -3159,41 +3365,23 @@
                 text += "\n--" + name + "\n";
               } else if (node.classList?.contains("timeinfo-box")) {
                 // skip
+              } else if (node.classList?.contains("message-wrapper")) {
+                // 메시지 박스도 skip
               } else if (node.childNodes) {
                 node.childNodes.forEach(walk);
               }
             };
             view.childNodes.forEach(walk);
-            return text.trim();
+            // 연속 줄바꿈 정리
+            return text.replace(/\n{3,}/g, '\n\n').trim();
           };
 
-          if (state.newMode && state.activePanel) {
-            // 새 글 모드: 해당 패널만 저장
-            const view = state.activePanel === "a" ? el.viewA : el.viewB;
-            const text = getPlainText(view);
-
-            if (state.activePanel === "a") {
-              state.originalTextA = text;
-              state.filenameA = "새 문서";
-            } else {
-              state.originalTextB = text;
-              state.filenameB = "새 문서";
-            }
-
-            exitEditMode();
-            updateDisplay(state.activePanel);
-            setViewMode("dual");
-            showToast(
-              `${state.activePanel.toUpperCase()} 저장 완료! 비교 모드로 전환`
-            );
-          } else {
-            // 편집 모드: 양쪽 다 저장
-            state.originalTextA = getPlainText(el.viewA);
-            state.originalTextB = getPlainText(el.viewB);
-            exitEditMode();
-            updateDisplay("both");
-            showToast("저장 완료!");
-          }
+          // 편집 모드: 양쪽 다 저장
+          state.originalTextA = getPlainText(el.viewA);
+          state.originalTextB = getPlainText(el.viewB);
+          exitEditMode();
+          updateDisplay("both");
+          showToast("저장 완료!");
         }
 
         el.btnEditCancel.addEventListener("click", () => {
@@ -3223,9 +3411,16 @@
           // 편집된 텍스트 추출 (HTML -> 텍스트)
           const getPlainText = (view) => {
             let text = "";
-            view.childNodes.forEach((node) => {
+            const walk = (node) => {
               if (node.nodeType === Node.TEXT_NODE) {
                 text += node.textContent;
+              } else if (node.nodeName === "BR") {
+                text += "\n";
+              } else if (node.nodeName === "DIV" || node.nodeName === "P") {
+                // div, p 태그는 줄바꿈 후 내용 처리
+                if (text && !text.endsWith("\n")) text += "\n";
+                node.childNodes.forEach(walk);
+                if (!text.endsWith("\n")) text += "\n";
               } else if (node.classList?.contains("speaker-line")) {
                 const idx = node.querySelector(".index-num");
                 const name = node.textContent
@@ -3233,14 +3428,16 @@
                   .trim();
                 text += "\n--" + name + "\n";
               } else if (node.classList?.contains("timeinfo-box")) {
-                // TimeInfo는 건너뜀 (이미 처리됨)
-              } else if (node.nodeName === "BR") {
-                text += "\n";
-              } else {
-                text += node.textContent;
+                // TimeInfo는 건너뜀
+              } else if (node.classList?.contains("message-wrapper")) {
+                // 메시지 박스도 skip
+              } else if (node.childNodes) {
+                node.childNodes.forEach(walk);
               }
-            });
-            return text.trim();
+            };
+            view.childNodes.forEach(walk);
+            // 연속 줄바꿈 정리
+            return text.replace(/\n{3,}/g, '\n\n').trim();
           };
 
           const textA = getPlainText(el.viewA);
