@@ -2,7 +2,7 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <!-- v6.6 배우 대기실 - 새 글 쓰기 모달 방식으로 변경 -->
+    <!-- v6.7 배우 대기실 - 캡처 구간 추출 버그 수정 (전체 HTML 사용) -->
     <title>📜 배우 대기실</title>
     <meta
       name="viewport"
@@ -671,6 +671,9 @@
         padding: 1px 3px;
         margin: 0 -1px;
         font-weight: 500; /* 글자만 살짝 두껍게 */
+        /* 아래 속성 추가: 줄바꿈 시 스타일(배경, radius)을 각 줄마다 복제 */
+        -webkit-box-decoration-break: clone;
+        box-decoration-break: clone;
       }
 
       /* Edit mode */
@@ -1122,7 +1125,7 @@
         height: 100%;
         border: none;
         padding: 18px;
-        font-family: 'Ridibatang', serif;
+        font-family: "Ridibatang", serif;
         font-size: 0.95rem;
         line-height: 1.9;
         resize: none;
@@ -1368,7 +1371,7 @@
         line-height: 1.85;
         white-space: pre-wrap;
         word-break: break-word;
-        text-align: justify; /* 양쪽 정렬 */
+        text-align: left; /* <- 명시적으로 왼쪽 정렬 (선택사항) */
       }
 
       .capture-text .speaker-line {
@@ -1807,20 +1810,31 @@
           <span class="newtext-title">📝 새 글 작성</span>
           <div class="newtext-actions">
             <button class="btn btn-sm" id="btn-newtext-cancel">취소</button>
-            <button class="btn btn-sm btn-primary" id="btn-newtext-save">저장 ▾</button>
+            <button class="btn btn-sm btn-primary" id="btn-newtext-save">
+              저장 ▾
+            </button>
           </div>
         </div>
         <div class="newtext-body">
-          <textarea id="newtext-editor" placeholder="여기에 글을 작성하세요..."></textarea>
+          <textarea
+            id="newtext-editor"
+            placeholder="여기에 글을 작성하세요..."
+          ></textarea>
         </div>
         <div class="newtext-footer">
           <span class="newtext-hint">💡 Ctrl+Enter로 저장 메뉴 열기</span>
         </div>
         <!-- 저장 위치 선택 드롭다운 -->
         <div class="newtext-save-menu" id="newtext-save-menu">
-          <button class="newtext-save-option" data-target="a">A 패널에 저장</button>
-          <button class="newtext-save-option" data-target="b">B 패널에 저장</button>
-          <button class="newtext-save-option" data-target="export">📥 파일로 내보내기</button>
+          <button class="newtext-save-option" data-target="a">
+            A 패널에 저장
+          </button>
+          <button class="newtext-save-option" data-target="b">
+            B 패널에 저장
+          </button>
+          <button class="newtext-save-option" data-target="export">
+            📥 파일로 내보내기
+          </button>
         </div>
       </div>
     </div>
@@ -2510,8 +2524,9 @@
         el.rangeEnd.value = "";
         el.rangeStart.value = "1";
 
-        el.captureTextA.innerHTML = el.viewA.innerHTML || "(없음)";
-        el.captureTextB.innerHTML = el.viewB.innerHTML || "(없음)";
+        // 전체 포맷된 HTML 사용 (페이지네이션 무관하게)
+        el.captureTextA.innerHTML = state.formattedHtmlA || "(없음)";
+        el.captureTextB.innerHTML = state.formattedHtmlB || "(없음)";
 
         updateCaptureMode();
         el.captureModal.classList.add("open");
@@ -2525,10 +2540,11 @@
         const start = parseInt(el.rangeStart.value) || 1;
         const end = parseInt(el.rangeEnd.value) || null;
 
+        // 전체 포맷된 HTML에서 구간 추출
         el.captureTextA.innerHTML =
-          getContentByRange(el.viewA.innerHTML, start, end) || "(없음)";
+          getContentByRange(state.formattedHtmlA, start, end) || "(없음)";
         el.captureTextB.innerHTML =
-          getContentByRange(el.viewB.innerHTML, start, end) || "(없음)";
+          getContentByRange(state.formattedHtmlB, start, end) || "(없음)";
         showToast(`#${start}~${end || "끝"} 구간 적용`);
       }
 
@@ -3225,7 +3241,10 @@
         });
 
         el.btnNewtextCancel.addEventListener("click", () => {
-          if (el.newtextEditor.value.trim() && !confirm("작성 중인 내용이 있습니다. 취소할까요?")) {
+          if (
+            el.newtextEditor.value.trim() &&
+            !confirm("작성 중인 내용이 있습니다. 취소할까요?")
+          ) {
             return;
           }
           el.newtextModal.classList.remove("open");
@@ -3239,58 +3258,67 @@
 
         // 저장 메뉴 외부 클릭 시 닫기
         document.addEventListener("click", (e) => {
-          if (!el.btnNewtextSave.contains(e.target) && !el.newtextSaveMenu.contains(e.target)) {
+          if (
+            !el.btnNewtextSave.contains(e.target) &&
+            !el.newtextSaveMenu.contains(e.target)
+          ) {
             el.newtextSaveMenu.classList.remove("show");
           }
         });
 
         // 저장 옵션 클릭
-        el.newtextSaveMenu.querySelectorAll(".newtext-save-option").forEach((opt) => {
-          opt.addEventListener("click", () => {
-            const target = opt.dataset.target;
-            const text = el.newtextEditor.value.trim();
-            
-            if (!text) {
-              showToast("내보낼 텍스트가 없어요");
-              return;
-            }
+        el.newtextSaveMenu
+          .querySelectorAll(".newtext-save-option")
+          .forEach((opt) => {
+            opt.addEventListener("click", () => {
+              const target = opt.dataset.target;
+              const text = el.newtextEditor.value.trim();
 
-            el.newtextSaveMenu.classList.remove("show");
-
-            if (target === "export") {
-              // 파일로 내보내기
-              const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = `새글_${new Date().toISOString().slice(0, 10)}.txt`;
-              a.click();
-              URL.revokeObjectURL(url);
-              showToast("파일로 내보내기 완료!");
-            } else {
-              // A 또는 B 패널에 저장
-              if (target === "a") {
-                state.originalTextA = text;
-                state.filenameA = "새 문서";
-                el.filenameA.textContent = "새 문서";
-                el.viewA.classList.remove("hidden");
-                el.zoneA.classList.add("hidden");
-                el.clearA.style.display = "block";
-              } else {
-                state.originalTextB = text;
-                state.filenameB = "새 문서";
-                el.filenameB.textContent = "새 문서";
-                el.viewB.classList.remove("hidden");
-                el.zoneB.classList.add("hidden");
-                el.clearB.style.display = "block";
+              if (!text) {
+                showToast("내보낼 텍스트가 없어요");
+                return;
               }
-              updateDisplay(target);
-              showToast(`${target.toUpperCase()} 패널에 저장 완료!`);
-            }
 
-            el.newtextModal.classList.remove("open");
+              el.newtextSaveMenu.classList.remove("show");
+
+              if (target === "export") {
+                // 파일로 내보내기
+                const blob = new Blob([text], {
+                  type: "text/plain;charset=utf-8",
+                });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `새글_${new Date()
+                  .toISOString()
+                  .slice(0, 10)}.txt`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast("파일로 내보내기 완료!");
+              } else {
+                // A 또는 B 패널에 저장
+                if (target === "a") {
+                  state.originalTextA = text;
+                  state.filenameA = "새 문서";
+                  el.filenameA.textContent = "새 문서";
+                  el.viewA.classList.remove("hidden");
+                  el.zoneA.classList.add("hidden");
+                  el.clearA.style.display = "block";
+                } else {
+                  state.originalTextB = text;
+                  state.filenameB = "새 문서";
+                  el.filenameB.textContent = "새 문서";
+                  el.viewB.classList.remove("hidden");
+                  el.zoneB.classList.add("hidden");
+                  el.clearB.style.display = "block";
+                }
+                updateDisplay(target);
+                showToast(`${target.toUpperCase()} 패널에 저장 완료!`);
+              }
+
+              el.newtextModal.classList.remove("open");
+            });
           });
-        });
 
         // Ctrl+Enter로 저장 메뉴 열기
         el.newtextEditor.addEventListener("keydown", (e) => {
@@ -3303,7 +3331,10 @@
         // 모달 배경 클릭 시 닫기
         el.newtextModal.addEventListener("click", (e) => {
           if (e.target === el.newtextModal) {
-            if (el.newtextEditor.value.trim() && !confirm("작성 중인 내용이 있습니다. 취소할까요?")) {
+            if (
+              el.newtextEditor.value.trim() &&
+              !confirm("작성 중인 내용이 있습니다. 취소할까요?")
+            ) {
               return;
             }
             el.newtextModal.classList.remove("open");
@@ -3314,8 +3345,8 @@
         // 붙여넣기 시 plain text만 받도록 처리 (전역 핸들러)
         function handlePaste(e) {
           e.preventDefault();
-          const text = e.clipboardData.getData('text/plain');
-          document.execCommand('insertText', false, text);
+          const text = e.clipboardData.getData("text/plain");
+          document.execCommand("insertText", false, text);
         }
 
         // 편집 모드 (기존 텍스트 수정용)
@@ -3333,8 +3364,8 @@
           el.viewB.contentEditable = true;
           el.viewA.classList.add("editable");
           el.viewB.classList.add("editable");
-          el.viewA.addEventListener('paste', handlePaste);
-          el.viewB.addEventListener('paste', handlePaste);
+          el.viewA.addEventListener("paste", handlePaste);
+          el.viewB.addEventListener("paste", handlePaste);
 
           showToast("편집 모드 활성화");
         }
@@ -3373,7 +3404,7 @@
             };
             view.childNodes.forEach(walk);
             // 연속 줄바꿈 정리
-            return text.replace(/\n{3,}/g, '\n\n').trim();
+            return text.replace(/\n{3,}/g, "\n\n").trim();
           };
 
           // 편집 모드: 양쪽 다 저장
@@ -3437,7 +3468,7 @@
             };
             view.childNodes.forEach(walk);
             // 연속 줄바꿈 정리
-            return text.replace(/\n{3,}/g, '\n\n').trim();
+            return text.replace(/\n{3,}/g, "\n\n").trim();
           };
 
           const textA = getPlainText(el.viewA);
