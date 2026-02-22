@@ -2,7 +2,7 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <!-- v6.7 배우 대기실 - 캡처 구간 추출 버그 수정 (전체 HTML 사용) -->
+    <!-- v6.10 배우 대기실 - 대사 하이라이트 토글 추가 -->
     <title>📜 배우 대기실</title>
     <meta
       name="viewport"
@@ -665,15 +665,38 @@
 
       /* 💬 대사 하이라이트 - 웜 그레이 (깔끔) */
       .dialogue-text {
-        background-color: rgba(0, 0, 0, 0.06); /* 흑백 투명도 */
         color: #333;
         border-radius: 4px;
         padding: 1px 3px;
         margin: 0 -1px;
-        font-weight: 500; /* 글자만 살짝 두껍게 */
         /* 아래 속성 추가: 줄바꿈 시 스타일(배경, radius)을 각 줄마다 복제 */
         -webkit-box-decoration-break: clone;
         box-decoration-break: clone;
+        transition: background-color 0.2s, font-weight 0.2s;
+      }
+
+      /* 대사 하이라이트 OFF: 배경 없이 기본 상태 */
+      .dialogue-text {
+        background-color: transparent;
+        font-weight: inherit;
+      }
+
+      /* 대사 하이라이트 ON */
+      .dialogue-highlight .dialogue-text {
+        background-color: rgba(92, 107, 192, 0.1);
+        font-weight: 500;
+      }
+
+      .panel-a.dialogue-highlight .dialogue-text,
+      .dialogue-highlight .panel-a .dialogue-text,
+      #capture-target.dialogue-highlight .capture-panel-a .dialogue-text {
+        background-color: rgba(74, 124, 89, 0.12);
+      }
+
+      .panel-b.dialogue-highlight .dialogue-text,
+      .dialogue-highlight .panel-b .dialogue-text,
+      #capture-target.dialogue-highlight .capture-panel-b .dialogue-text {
+        background-color: rgba(124, 90, 74, 0.12);
       }
 
       /* Edit mode */
@@ -1380,9 +1403,10 @@
         font-size: 0.75rem;
         margin-top: 1.4em;
         margin-bottom: 0.2em;
-        padding: 4px 8px;
-        border-radius: 4px;
-        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 6px;
+        display: block;
+        width: fit-content;
       }
 
       .capture-panel-a .speaker-line {
@@ -1512,6 +1536,7 @@
           <button class="btn" id="btn-new">📝 새 글</button>
         </div>
         <button class="btn" id="btn-edit">✏️ 편집</button>
+        <button class="btn" id="btn-dialogue">💬 대사</button>
         <button class="btn" id="btn-diff">🔍 차이</button>
         <button class="btn" id="btn-sync">🔗 동기화</button>
         <button class="btn" id="btn-reset-all" title="전체 초기화">
@@ -1872,6 +1897,7 @@
         newMode: false, // 새 글 작성 모드
         activePanel: null, // 현재 편집 중인 패널 ('a' or 'b')
         diffMode: false, // 차이 비교 모드
+        dialogueHighlight: false, // 대사 하이라이트 모드
         detectedSpeakers: [], // 감지된 화자명 목록
         fontSize: 2, // 0:작게, 1:조금작게, 2:중, 3:조금크게, 4:크게
       };
@@ -1901,6 +1927,7 @@
         clearA: document.getElementById("clear-a"),
         clearB: document.getElementById("clear-b"),
         btnSync: document.getElementById("btn-sync"),
+        btnDialogue: document.getElementById("btn-dialogue"),
         syncIndicator: document.getElementById("sync-indicator"),
         btnRules: document.getElementById("btn-rules"),
         rulesPanel: document.getElementById("rules-panel"),
@@ -2529,6 +2556,8 @@
         el.captureTextB.innerHTML = state.formattedHtmlB || "(없음)";
 
         updateCaptureMode();
+        // 대사 하이라이트 상태 동기화
+        document.getElementById("capture-target")?.classList.toggle("dialogue-highlight", state.dialogueHighlight);
         el.captureModal.classList.add("open");
       }
 
@@ -2714,15 +2743,27 @@
     }
     .speaker-line {
       display: block;
+      font-family: 'IBM Plex Sans KR', sans-serif;
       font-weight: 600;
-      margin-top: 1.2em;
-      padding-bottom: 0.3em;
-      border-bottom: 1px solid #eee;
+      font-size: 0.75rem;
+      margin-top: 1.4em;
+      margin-bottom: 0.2em;
+      padding: 4px 10px;
+      border-radius: 6px;
+      width: fit-content;
+    }
+    .capture-panel-a .speaker-line {
+      background: #e8f5e9;
+      color: #4a7c59;
+    }
+    .capture-panel-b .speaker-line {
+      background: #fff3e0;
+      color: #7c5a4a;
     }
     .index-num {
-      color: #999;
-      font-size: 0.75em;
+      font-weight: 700;
       margin-right: 6px;
+      opacity: 0.7;
     }
     .timeinfo-box {
       background: #f5f3ee;
@@ -2836,6 +2877,18 @@
           el.btnSync.textContent = state.syncEnabled
             ? "🔗 동기화"
             : "🔓 해제됨";
+        });
+
+        // 대사 하이라이트 토글
+        el.btnDialogue.addEventListener("click", () => {
+          state.dialogueHighlight = !state.dialogueHighlight;
+          el.btnDialogue.classList.toggle("active", state.dialogueHighlight);
+          // 메인 뷰어 패널에 클래스 토글
+          el.viewA.closest(".panel")?.classList.toggle("dialogue-highlight", state.dialogueHighlight);
+          el.viewB.closest(".panel")?.classList.toggle("dialogue-highlight", state.dialogueHighlight);
+          // 캡처 영역에도 적용
+          document.getElementById("capture-target")?.classList.toggle("dialogue-highlight", state.dialogueHighlight);
+          showToast(state.dialogueHighlight ? "💬 대사 강조 ON" : "💬 대사 강조 OFF");
         });
 
         // View mode
